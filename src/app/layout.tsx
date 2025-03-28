@@ -6,7 +6,6 @@ import { ThemeProvider } from "../lib/themeContext";
 import { DateProvider } from "../lib/dateContext";
 import { TeamProvider } from "../lib/teamContext";
 import Sidebar from "../components/Sidebar";
-import HideNextjsBadge from "../components/HideNextjsBadge";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -41,7 +40,6 @@ export default function RootLayout({
                         </p>
                       </div>
                     </footer>
-                    <HideNextjsBadge />
                   </div>
                 </div>
               </TeamProvider>

@@ -111,21 +111,28 @@ export default function Heatmap() {
       contributions: { instanceId: string, count: number }[] 
     }>();
     
-    contributionsArray.flat().forEach(contribution => {
-      const existing = aggregatedMap.get(contribution.date);
+    type Contribution = {
+      date: string;
+      count: number;
+      instanceId: string;
+    };
+    
+    contributionsArray.flat().forEach((contribution) => {
+      const typedContribution = contribution as Contribution;
+      const existing = aggregatedMap.get(typedContribution.date);
       
       if (existing) {
-        existing.count += contribution.count;
+        existing.count += typedContribution.count;
         existing.contributions.push({
-          instanceId: contribution.instanceId,
-          count: contribution.count
+          instanceId: typedContribution.instanceId,
+          count: typedContribution.count
         });
       } else {
-        aggregatedMap.set(contribution.date, {
-          count: contribution.count,
+        aggregatedMap.set(typedContribution.date, {
+          count: typedContribution.count,
           contributions: [{
-            instanceId: contribution.instanceId,
-            count: contribution.count
+            instanceId: typedContribution.instanceId,
+            count: typedContribution.count
           }]
         });
       }
