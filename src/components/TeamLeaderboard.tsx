@@ -6,7 +6,7 @@ import { useRepo } from '../lib/repoContext';
 import { useDateRange } from '../lib/dateContext';
 import { fetchContributions } from '../lib/gitlabApi';
 import { fetchGitHubContributions } from '../lib/githubApi';
-import { TeamLeaderboardEntry, TeamMember } from '../types';
+import { TeamLeaderboardEntry } from '../types';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip } from 'react-tooltip';
@@ -16,7 +16,6 @@ export default function TeamLeaderboard() {
   const { teamMembers, loading: teamLoading } = useTeam();
   const { gitlabInstances, githubInstances, loading: repoLoading } = useRepo();
   const { dateRange } = useDateRange();
-  const { resolvedTheme } = useTheme();
   const [leaderboardData, setLeaderboardData] = useState<TeamLeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -322,7 +321,7 @@ export default function TeamLeaderboard() {
                 }}
                 tooltipDataAttrs={(value) => {
                   if (!value || !value.date) {
-                    return { 'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}` } as any;
+                    return { 'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}` } as Record<string, string>;
                   }
 
                   const date = new Date(value.date);
@@ -331,7 +330,7 @@ export default function TeamLeaderboard() {
                   return {
                     'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}`,
                     'data-tooltip-content': `${formattedDate}: ${value.count} contributions`,
-                  } as any;
+                  } as Record<string, string>;
                 }}
               />
               

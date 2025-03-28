@@ -11,7 +11,6 @@ export default function Leaderboard() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
   const { dateRange } = useDateRange();
   const [instanceContributions, setInstanceContributions] = useState<Map<string, number>>(new Map());
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -124,7 +123,7 @@ export default function Leaderboard() {
         const leaderboard = Array.from(usersMap.values())
           .sort((a, b) => b.totalContributions - a.totalContributions);
         
-        setLeaderboardData(leaderboard);
+        // No need to set leaderboardData here, as it's not used in the component
       } catch (error) {
         console.error('Error fetching leaderboard data:', error);
         setError('Failed to fetch leaderboard data. Please try again.');

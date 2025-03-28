@@ -8,14 +8,7 @@ import { useRepo } from '../lib/repoContext';
 import { fetchContributions } from '../lib/gitlabApi';
 import { fetchGitHubContributions } from '../lib/githubApi';
 import { AggregatedContribution } from '../types';
-import { useTheme } from '../lib/themeContext';
 import { useDateRange } from '../lib/dateContext';
-
-type ReactCalendarHeatmapValue = {
-  date: string | Date;
-  count?: number;
-  [key: string]: unknown;
-};
 
 type YearOption = {
   label: string;
@@ -26,7 +19,6 @@ type YearOption = {
 
 export default function Heatmap() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
-  const { resolvedTheme } = useTheme();
   const { dateRange, setDateRange } = useDateRange();
   const [aggregatedData, setAggregatedData] = useState<AggregatedContribution[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -369,7 +361,7 @@ export default function Heatmap() {
             }}
             tooltipDataAttrs={(value) => {
               if (!value || !value.date) {
-                return { 'data-tooltip-id': 'heatmap-tooltip' } as any;
+                return { 'data-tooltip-id': 'heatmap-tooltip' } as Record<string, string>;
               }
               
               // Format date - use local timezone to avoid date offset issues
@@ -414,7 +406,7 @@ export default function Heatmap() {
               return {
                 'data-tooltip-id': 'heatmap-tooltip',
                 'data-tooltip-html': htmlContent
-              } as any;
+              } as Record<string, string>;
             }}
           />
           

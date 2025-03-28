@@ -27,16 +27,18 @@ export async function POST(req: NextRequest) {
     });
     
     return NextResponse.json(response.data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error proxying GitLab request:', error);
+    
+    const typedError = error as { message: string, response?: { status: number } };
     
     return NextResponse.json(
       { 
         error: 'Failed to make GitLab request',
-        message: error.message,
-        status: error.response?.status
+        message: typedError.message,
+        status: typedError.response?.status
       },
-      { status: error.response?.status || 500 }
+      { status: typedError.response?.status || 500 }
     );
   }
 } 

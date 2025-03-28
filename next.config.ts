@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig = {
   reactStrictMode: true,
   devIndicators: {
-    buildActivityPosition: 'bottom-right'
+    position: 'bottom-right'
   },
   output: 'standalone',
 };

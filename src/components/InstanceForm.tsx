@@ -76,8 +76,9 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to add GitLab instance');
+    } catch (err: unknown) {
+      const typedError = err as { message: string };
+      setError(typedError.message || 'Failed to add GitLab instance');
     } finally {
       setIsSubmitting(false);
     }

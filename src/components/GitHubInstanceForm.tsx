@@ -69,8 +69,9 @@ export default function GitHubInstanceForm({ instanceToEdit, onCancel }: GitHubI
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to add GitHub instance');
+    } catch (err: unknown) {
+      const typedError = err as { message: string };
+      setError(typedError.message || 'Failed to add GitHub instance');
     } finally {
       setIsSubmitting(false);
     }

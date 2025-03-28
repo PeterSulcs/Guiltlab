@@ -23,106 +23,6 @@ export async function fetchGitLabUser(instance: GitLabInstance): Promise<UserDat
   }
 }
 
-/**
- * Fetch contribution data for specific years using GitLab's calendar endpoint
- * This is better for historical data as it directly uses GitLab's contribution API
- */
-async function fetchCalendarContributions(
-  instance: GitLabInstance,
-  userId: number, 
-  username: string,
-  year: number
-): Promise<ContributionData[]> {
-  try {
-    console.log(`Trying calendar endpoint for ${instance.name} (year ${year}): ${instance.baseUrl}/api/v4/users/${userId}/calendar`);
-    
-    // GitLab has a specialized endpoint for contribution calendars per user
-    // This endpoint may not be available in all GitLab instances
-    const response = await axios.get(
-      `${instance.baseUrl}/api/v4/users/${userId}/calendar`,
-      {
-        headers: {
-          'Private-Token': instance.token
-        },
-        params: {
-          year: year
-        }
-      }
-    );
-    
-    // The calendar endpoint returns data in this format:
-    // { "YYYY-MM-DD": count, ... }
-    const calendarData = response.data;
-    
-    // Log raw data for debugging
-    console.log(`Calendar data for ${instance.name} (year ${year}):`, calendarData);
-    
-    // Convert to our ContributionData format
-    const contributions: ContributionData[] = Object.entries(calendarData)
-      .filter(([_, count]) => (count as number) > 0) // Only include days with contributions
-      .map(([date, count]) => ({
-        date,
-        count: count as number,
-        instanceId: instance.id
-      }));
-    
-    console.log(`Calendar endpoint for ${instance.name} (year ${year}) returned ${contributions.length} contribution days`);
-    return contributions;
-  } catch (error: unknown) {
-    // If endpoint doesn't exist (404) or other error, log it and return empty array
-    const typedError = error as { response?: { status: number }, message: string };
-    const statusCode = typedError.response?.status || 'unknown';
-    console.error(`Error fetching calendar contributions for ${instance.name} (year ${year}): ${statusCode} - ${typedError.message}`);
-    
-    if (statusCode === 404) {
-      console.log(`Calendar endpoint not supported by this GitLab instance (${instance.name})`);
-    }
-    
-    // Fall back to empty array on error
-    return [];
-  }
-}
-
-/**
- * Fetch contribution data using the user activity endpoint
- * This can sometimes work better for historical data on some GitLab instances
- */
-async function fetchActivityContributions(
-  instance: GitLabInstance,
-  username: string,
-  year: number
-): Promise<ContributionData[]> {
-  try {
-    console.log(`Trying user activity endpoint for ${instance.name} (year ${year})...`);
-    
-    // Some GitLab instances support the user activity endpoint which can have more historical data
-    const response = await axios.get(
-      `${instance.baseUrl}/users/${username}/activity`,
-      {
-        headers: {
-          'Private-Token': instance.token
-        }
-      }
-    );
-    
-    // Try to extract contribution data from the response
-    // Format varies by GitLab version, but typically contains HTML with contribution data
-    const activityData = response.data;
-    
-    // Log info about the response 
-    console.log(`Activity endpoint response type: ${typeof activityData}`);
-    console.log(`Activity response length: ${typeof activityData === 'string' ? activityData.length : 'not a string'}`);
-    
-    // Since this is a more complex approach that requires parsing HTML,
-    // we'll leave this as a placeholder and return empty for now
-    console.log(`Activity endpoint for ${instance.name} (year ${year}) not fully implemented`);
-    return [];
-  } catch (error) {
-    console.error(`Error fetching activity for ${instance.name} (year ${year}):`, error);
-    return [];
-  }
-}
-
 // Function to fetch contributions data from GitLab
 export async function fetchContributions(
   instance: GitLabInstance, 
@@ -562,18 +462,6 @@ async function fetchContributionsFromEvents(
     }));
   
   return contributions;
-}
-
-// Try to get contribution data using direct user profile scraping
-// This is a fallback approach for older GitLab instances or older data
-async function fetchContributionsViaProfile(
-  instance: GitLabInstance,
-  username: string,
-  year: number
-): Promise<ContributionData[]> {
-  // This would involve fetching the user's profile page and parsing the SVG heatmap
-  // Not implemented yet due to complexity
-  return [];
 }
 
 // Function to aggregate contributions from multiple GitLab instances
