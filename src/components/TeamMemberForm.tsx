@@ -207,7 +207,12 @@ export default function TeamMemberForm() {
               disabled={isSubmitting}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
-              {isSubmitting ? 'Adding...' : 'Add Team Member'}
+              {isSubmitting ? (
+                <span className="flex items-center justify-center">
+                  <div className="spinner"></div>
+                  Adding...
+                </span>
+              ) : 'Add Team Member'}
             </button>
           </div>
         </div>

@@ -165,7 +165,42 @@ export default function Leaderboard() {
         </p>
       </div>
       
-      {isLoading && <p className="text-muted-foreground">Loading leaderboard data...</p>}
+      {isLoading && (
+        <div className="animate-pulse space-y-4">
+          <div className="flex items-center mb-4">
+            <div className="spinner"></div>
+            <span className="text-muted-foreground">Loading leaderboard data...</span>
+          </div>
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="pb-2 text-left">Rank</th>
+                <th className="pb-2 text-left">Instance</th>
+                <th className="pb-2 text-left">Type</th>
+                <th className="pb-2 text-right">Contributions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 2, 3, 4].map((_, index) => (
+                <tr key={index} className="border-b border-border">
+                  <td className="py-3 pr-2">
+                    <div className="skeleton h-4 w-4"></div>
+                  </td>
+                  <td className="py-3 pr-2">
+                    <div className="skeleton h-4 w-28"></div>
+                  </td>
+                  <td className="py-3 pr-2">
+                    <div className="skeleton h-4 w-16"></div>
+                  </td>
+                  <td className="py-3 text-right">
+                    <div className="skeleton h-4 w-12 ml-auto"></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       
       {error && (
         <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">

@@ -200,7 +200,28 @@ export default function TeamLeaderboard() {
     <div className="space-y-6">
       {isLoading ? (
         <div className="bg-card-background rounded-lg shadow border border-border p-6">
-          <p className="text-muted-foreground">Loading team contributions...</p>
+          <div className="flex items-center mb-4">
+            <div className="spinner"></div>
+            <span className="text-muted-foreground">Loading team contributions...</span>
+          </div>
+          <div className="animate-pulse space-y-4">
+            {/* Simulate team member skeletons */}
+            {[1, 2, 3].map(index => (
+              <div key={index} className="bg-background rounded-md p-6 border border-border">
+                <div className="flex justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="skeleton w-8 h-8 rounded-full mr-3"></div>
+                    <div className="space-y-2">
+                      <div className="skeleton h-4 w-32"></div>
+                      <div className="skeleton h-3 w-24"></div>
+                    </div>
+                  </div>
+                  <div className="skeleton h-4 w-16"></div>
+                </div>
+                <div className="skeleton h-20 w-full animate-shimmer"></div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : error ? (
         <div className="bg-card-background rounded-lg shadow border border-border p-6">

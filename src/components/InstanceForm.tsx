@@ -158,7 +158,12 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
             disabled={isSubmitting}
           >
             {isSubmitting 
-              ? (isEditing ? 'Saving...' : 'Adding...') 
+              ? (
+                <span className="flex items-center justify-center">
+                  <div className="spinner"></div>
+                  {isEditing ? 'Saving...' : 'Adding...'}
+                </span>
+              ) 
               : (isEditing ? 'Save Changes' : 'Add GitLab Instance')}
           </button>
           
@@ -167,6 +172,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
               type="button"
               onClick={onCancel}
               className="flex-1 bg-muted text-muted-foreground font-medium p-2 rounded hover:opacity-90 transition-opacity"
+              disabled={isSubmitting}
             >
               Cancel
             </button>

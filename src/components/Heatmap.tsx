@@ -285,7 +285,18 @@ export default function Heatmap() {
         </div>
       </div>
       
-      {isLoading && <p className="text-muted-foreground">Loading heatmap data...</p>}
+      {isLoading && (
+        <div className="animate-pulse p-8">
+          <div className="flex flex-col space-y-4">
+            <div className="skeleton h-4 w-3/4 mb-8"></div>
+            <div className="skeleton h-24 w-full"></div>
+            <div className="skeleton h-24 w-full"></div>
+            <div className="flex justify-end mt-2">
+              <div className="skeleton h-3 w-32"></div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {error && (
         <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
