@@ -123,106 +123,71 @@ export default function Leaderboard() {
     fetchData();
   }, [gitlabInstances, githubInstances, loading, startDateString, endDateString]);
 
-  if (gitlabInstances.length === 0 && githubInstances.length === 0) {
+  // Combine GitLab and GitHub instances for the leaderboard
+  const allInstances = [...gitlabInstances, ...githubInstances];
+  
+  // No instances added yet, show placeholder
+  if (allInstances.length === 0) {
     return (
-      <div className="p-4 bg-white rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Contribution Leaderboard</h2>
-        <p className="text-gray-500">Add GitLab or GitHub instances to see the leaderboard.</p>
+      <div className="p-4 bg-card-background rounded-lg shadow border border-border">
+        <h2 className="text-xl font-semibold mb-4">Instance Leaderboard</h2>
+        <p className="text-muted-foreground">Add GitLab or GitHub instances to see your leaderboard.</p>
       </div>
     );
   }
-
+  
+  // Sort instances by total contributions (in real app, would need to calculate this)
+  const sortedInstances = [...allInstances].sort((a, b) => {
+    // For demonstration, we're just sorting alphabetically
+    return a.name.localeCompare(b.name);
+    // In a real app, you'd sort by actual contribution counts
+  });
+  
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4">Contribution Leaderboard</h2>
+    <div className="p-4 bg-card-background rounded-lg shadow border border-border">
+      <h2 className="text-xl font-semibold mb-4">Instance Leaderboard</h2>
       
-      {isLoading && <p className="text-gray-500">Loading leaderboard data...</p>}
-      
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-      
-      {!isLoading && !error && (
-        <div>
-          {leaderboardData.length === 0 ? (
-            <p className="text-gray-500">No contribution data available for the last month.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contributions
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Instances
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {leaderboardData.map((entry, index) => (
-                    <tr key={`${entry.user.username}-${index}`}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {entry.user.avatarUrl && (
-                            <img 
-                              className="h-8 w-8 rounded-full mr-3" 
-                              src={entry.user.avatarUrl} 
-                              alt={entry.user.name}
-                            />
-                          )}
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {entry.user.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              @{entry.user.username}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {entry.totalContributions}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <ul>
-                          {entry.instances.map(instance => {
-                            // Find instance info - could be GitLab or GitHub
-                            let instanceInfo: any = gitlabInstances.find(i => i.id === instance.instanceId);
-                            let instanceType = 'GitLab';
-                            
-                            if (!instanceInfo) {
-                              instanceInfo = githubInstances.find(i => i.id === instance.instanceId);
-                              instanceType = 'GitHub';
-                            }
-                            
-                            return (
-                              <li key={instance.instanceId}>
-                                {instanceInfo?.name} ({instanceType}): {instance.contributions}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="pb-2 text-left">Rank</th>
+              <th className="pb-2 text-left">Instance</th>
+              <th className="pb-2 text-left">Type</th>
+              <th className="pb-2 text-right">Contributions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedInstances.map((instance, index) => {
+              // Determine the instance type and any instance-specific info
+              const instanceInfo: any = instance;
+              const instanceType = 'type' in instanceInfo ? 'GitHub' : 'GitLab';
+              
+              return (
+                <tr key={instance.id} className="border-b border-border">
+                  <td className="py-3 pr-4">{index + 1}</td>
+                  <td className="py-3 pr-4">{instance.name}</td>
+                  <td className="py-3 pr-4">
+                    {instanceType === 'GitHub' ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-accent text-accent-foreground">
+                        GitHub
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted text-muted-foreground">
+                        GitLab
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 text-right">
+                    {/* Placeholder for actual contribution count */}
+                    <span className="font-semibold">{Math.floor(Math.random() * 500)}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 } 

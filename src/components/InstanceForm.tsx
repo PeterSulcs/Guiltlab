@@ -9,162 +9,163 @@ interface InstanceFormProps {
   onCancel?: () => void;
 }
 
-export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormProps) {
+export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormProps = {}) {
   const { addGitLabInstance, editGitLabInstance } = useRepo();
-  const [formData, setFormData] = useState({
-    name: '',
-    baseUrl: '',
-    token: ''
-  });
+  const [name, setName] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [token, setToken] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
   const isEditing = !!instanceToEdit;
-
-  // Set form data when editing an instance
+  
+  // Initialize form with instance data when editing
   useEffect(() => {
     if (instanceToEdit) {
-      setFormData({
-        name: instanceToEdit.name,
-        baseUrl: instanceToEdit.baseUrl,
-        token: instanceToEdit.token
-      });
+      setName(instanceToEdit.name);
+      setBaseUrl(instanceToEdit.baseUrl);
+      setToken(instanceToEdit.token);
     }
   }, [instanceToEdit]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     setError('');
-
-    // Validate form
-    if (!formData.name || !formData.baseUrl || !formData.token) {
-      setError('All fields are required');
-      return;
-    }
-
-    // Remove trailing slash from baseUrl if present
-    const baseUrl = formData.baseUrl.endsWith('/')
-      ? formData.baseUrl.slice(0, -1)
-      : formData.baseUrl;
-
+    setSuccess('');
+    
     try {
-      if (isEditing && instanceToEdit) {
-        // Update the instance
-        editGitLabInstance(instanceToEdit.id, {
-          name: formData.name,
-          baseUrl,
-          token: formData.token
-        });
-        
-        if (onCancel) onCancel(); // Close the edit form
-      } else {
-        // Create the instance object
-        const newInstance: GitLabInstance = {
-          id: crypto.randomUUID(),
-          name: formData.name,
-          baseUrl,
-          token: formData.token
-        };
-        
-        // Add the instance
-        addGitLabInstance(newInstance);
-        
-        // Reset form
-        setFormData({
-          name: '',
-          baseUrl: '',
-          token: ''
-        });
+      if (!name.trim() || !baseUrl.trim() || !token.trim()) {
+        throw new Error('All fields are required');
       }
-    } catch (error) {
-      setError('Failed to add GitLab instance. Please check your credentials and try again.');
-      console.error('Error adding instance:', error);
+      
+      // Validate URL format
+      try {
+        new URL(baseUrl);
+      } catch {
+        throw new Error('Invalid URL format');
+      }
+      
+      if (isEditing && instanceToEdit) {
+        // Update existing instance
+        editGitLabInstance(instanceToEdit.id, {
+          name: name.trim(),
+          baseUrl: baseUrl.trim(),
+          token: token.trim()
+        });
+        
+        if (onCancel) {
+          onCancel(); // Return to list view
+        }
+      } else {
+        // Add new instance
+        await addGitLabInstance({
+          id: crypto.randomUUID(),
+          name: name.trim(),
+          baseUrl: baseUrl.trim(),
+          token: token.trim()
+        });
+        
+        // Reset form on success
+        setName('');
+        setBaseUrl('');
+        setToken('');
+        setSuccess('GitLab instance added successfully');
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to add GitLab instance');
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const handleCancel = () => {
-    if (onCancel) onCancel();
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
+    <div className="bg-card-background rounded-lg shadow border border-border p-4">
       <h2 className="text-xl font-semibold mb-4">
         {isEditing ? 'Edit GitLab Instance' : 'Add GitLab Instance'}
       </h2>
       
       {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+        <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
           {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="mb-4 p-2 bg-accent text-accent-foreground rounded">
+          {success}
         </div>
       )}
       
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="name">
-            Name
+          <label htmlFor="name" className="block text-sm font-medium mb-1">
+            Instance Name
           </label>
           <input
             type="text"
             id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="My GitLab"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-2 border border-border rounded bg-input"
+            placeholder="e.g., Company GitLab"
+            disabled={isSubmitting}
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="baseUrl">
+          <label htmlFor="baseUrl" className="block text-sm font-medium mb-1">
             Base URL
           </label>
           <input
-            type="url"
+            type="text"
             id="baseUrl"
-            name="baseUrl"
-            value={formData.baseUrl}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="https://gitlab.example.com"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            className="w-full p-2 border border-border rounded bg-input"
+            placeholder="e.g., https://gitlab.com"
+            disabled={isSubmitting}
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="token">
+          <label htmlFor="token" className="block text-sm font-medium mb-1">
             Personal Access Token
           </label>
           <input
             type="password"
             id="token"
-            name="token"
-            value={formData.token}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="Your personal access token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className="w-full p-2 border border-border rounded bg-input"
+            placeholder="Enter your GitLab token"
+            disabled={isSubmitting}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Token needs read_user and read_api scopes
+          <p className="mt-1 text-xs text-muted-foreground">
+            Token requires <code>read_user</code> and <code>read_api</code> scopes
           </p>
         </div>
         
-        <div className="flex flex-row space-x-2">
+        <div className="flex space-x-3">
           <button
             type="submit"
-            className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+            className="flex-1 bg-primary text-primary-foreground font-medium p-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+            disabled={isSubmitting}
           >
-            {isEditing ? 'Save Changes' : 'Add Instance'}
+            {isSubmitting 
+              ? (isEditing ? 'Saving...' : 'Adding...') 
+              : (isEditing ? 'Save Changes' : 'Add GitLab Instance')}
           </button>
           
-          {isEditing && (
+          {isEditing && onCancel && (
             <button
               type="button"
-              onClick={handleCancel}
-              className="py-2 px-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-md"
+              onClick={onCancel}
+              className="flex-1 bg-muted text-muted-foreground font-medium p-2 rounded hover:opacity-90 transition-opacity"
             >
               Cancel
             </button>

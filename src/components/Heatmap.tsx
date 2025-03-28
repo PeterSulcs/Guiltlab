@@ -8,6 +8,7 @@ import { useRepo } from '../lib/repoContext';
 import { fetchContributions } from '../lib/gitlabApi';
 import { fetchGitHubContributions } from '../lib/githubApi';
 import { AggregatedContribution } from '../types';
+import { useTheme } from '../lib/themeContext';
 
 type ReactCalendarHeatmapValue = {
   date: string | Date;
@@ -17,6 +18,7 @@ type ReactCalendarHeatmapValue = {
 
 export default function Heatmap() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
+  const { resolvedTheme } = useTheme();
   const [aggregatedData, setAggregatedData] = useState<AggregatedContribution[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -129,21 +131,21 @@ export default function Heatmap() {
 
   if (gitlabInstances.length === 0 && githubInstances.length === 0) {
     return (
-      <div className="p-4 bg-white rounded-lg shadow">
+      <div className="p-4 bg-card-background rounded-lg shadow border border-border">
         <h2 className="text-xl font-semibold mb-4">Contribution Heatmap</h2>
-        <p className="text-gray-500">Add GitLab or GitHub instances to see your contribution heatmap.</p>
+        <p className="text-muted-foreground">Add GitLab or GitHub instances to see your contribution heatmap.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
+    <div className="p-4 bg-card-background rounded-lg shadow border border-border">
       <h2 className="text-xl font-semibold mb-4">Contribution Heatmap</h2>
       
-      {isLoading && <p className="text-gray-500">Loading heatmap data...</p>}
+      {isLoading && <p className="text-muted-foreground">Loading heatmap data...</p>}
       
       {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+        <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
           {error}
         </div>
       )}
@@ -151,14 +153,20 @@ export default function Heatmap() {
       {!isLoading && !error && (
         <div className="heatmap-container">
           <style jsx>{`
-            .color-empty { fill: #ebedf0; }
-            .color-scale-1 { fill: #acd5f2; }
-            .color-scale-2 { fill: #7fa8c9; }
-            .color-scale-3 { fill: #527ba0; }
-            .color-scale-4 { fill: #254e77; }
+            .color-empty { fill: var(--color-empty); }
+            .color-scale-1 { fill: var(--color-scale-1); }
+            .color-scale-2 { fill: var(--color-scale-2); }
+            .color-scale-3 { fill: var(--color-scale-3); }
+            .color-scale-4 { fill: var(--color-scale-4); }
             
+            /* Override react-calendar-heatmap styles for dark mode */
             :global(.react-calendar-heatmap) {
               width: 100%;
+            }
+            
+            :global(.react-calendar-heatmap text) {
+              fill: var(--foreground);
+              font-size: 10px;
             }
           `}</style>
           

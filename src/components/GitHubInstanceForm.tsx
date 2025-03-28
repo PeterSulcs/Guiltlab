@@ -9,157 +9,156 @@ interface GitHubInstanceFormProps {
   onCancel?: () => void;
 }
 
-export default function GitHubInstanceForm({ instanceToEdit, onCancel }: GitHubInstanceFormProps) {
+export default function GitHubInstanceForm({ instanceToEdit, onCancel }: GitHubInstanceFormProps = {}) {
   const { addGitHubInstance, editGitHubInstance } = useRepo();
-  const [formData, setFormData] = useState({
-    name: '',
-    username: '',
-    token: ''
-  });
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [token, setToken] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
   const isEditing = !!instanceToEdit;
-
-  // Set form data when editing an instance
+  
+  // Initialize form with instance data when editing
   useEffect(() => {
     if (instanceToEdit) {
-      setFormData({
-        name: instanceToEdit.name,
-        username: instanceToEdit.username,
-        token: instanceToEdit.token
-      });
+      setName(instanceToEdit.name);
+      setUsername(instanceToEdit.username);
+      setToken(instanceToEdit.token);
     }
   }, [instanceToEdit]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     setError('');
-
-    // Validate form
-    if (!formData.name || !formData.username || !formData.token) {
-      setError('All fields are required');
-      return;
-    }
-
+    setSuccess('');
+    
     try {
-      if (isEditing && instanceToEdit) {
-        // Update the instance
-        editGitHubInstance(instanceToEdit.id, {
-          name: formData.name,
-          username: formData.username,
-          token: formData.token
-        });
-        
-        if (onCancel) onCancel(); // Close the edit form
-      } else {
-        // Create the instance object
-        const newInstance: GitHubInstance = {
-          id: crypto.randomUUID(),
-          name: formData.name,
-          username: formData.username,
-          token: formData.token
-        };
-        
-        // Add the instance
-        addGitHubInstance(newInstance);
-        
-        // Reset form
-        setFormData({
-          name: '',
-          username: '',
-          token: ''
-        });
+      if (!name.trim() || !username.trim() || !token.trim()) {
+        throw new Error('All fields are required');
       }
-    } catch (error) {
-      setError('Failed to add GitHub instance. Please check your credentials and try again.');
-      console.error('Error adding GitHub instance:', error);
+      
+      if (isEditing && instanceToEdit) {
+        // Update existing instance
+        editGitHubInstance(instanceToEdit.id, {
+          name: name.trim(),
+          username: username.trim(),
+          token: token.trim()
+        });
+        
+        if (onCancel) {
+          onCancel(); // Return to list view
+        }
+      } else {
+        // Add new instance
+        await addGitHubInstance({
+          id: crypto.randomUUID(),
+          name: name.trim(),
+          username: username.trim(),
+          token: token.trim()
+        });
+        
+        // Reset form on success
+        setName('');
+        setUsername('');
+        setToken('');
+        setSuccess('GitHub instance added successfully');
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to add GitHub instance');
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const handleCancel = () => {
-    if (onCancel) onCancel();
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
+    <div className="bg-card-background rounded-lg shadow border border-border p-4">
       <h2 className="text-xl font-semibold mb-4">
-        {isEditing ? 'Edit GitHub Instance' : 'Add GitHub Instance'}
+        {isEditing ? 'Edit GitHub Account' : 'Add GitHub Account'}
       </h2>
       
       {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+        <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
           {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="mb-4 p-2 bg-accent text-accent-foreground rounded">
+          {success}
         </div>
       )}
       
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="name">
-            Name
+          <label htmlFor="github-name" className="block text-sm font-medium mb-1">
+            Account Name
           </label>
           <input
             type="text"
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="My GitHub"
+            id="github-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-2 border border-border rounded bg-input"
+            placeholder="e.g., Personal GitHub"
+            disabled={isSubmitting}
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="username">
+          <label htmlFor="github-username" className="block text-sm font-medium mb-1">
             GitHub Username
           </label>
           <input
             type="text"
-            id="username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="octocat"
+            id="github-username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full p-2 border border-border rounded bg-input"
+            placeholder="e.g., octocat"
+            disabled={isSubmitting}
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="token">
+          <label htmlFor="github-token" className="block text-sm font-medium mb-1">
             Personal Access Token
           </label>
           <input
             type="password"
-            id="token"
-            name="token"
-            value={formData.token}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="Your personal access token"
+            id="github-token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className="w-full p-2 border border-border rounded bg-input"
+            placeholder="Enter your GitHub token"
+            disabled={isSubmitting}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Token needs read:user scope for contributions data
+          <p className="mt-1 text-xs text-muted-foreground">
+            Token requires <code>read:user</code> scope
           </p>
         </div>
         
-        <div className="flex flex-row space-x-2">
+        <div className="flex space-x-3">
           <button
             type="submit"
-            className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+            className="flex-1 bg-primary text-primary-foreground font-medium p-2 rounded hover:opacity-90 transition-opacity disabled:opacity-50"
+            disabled={isSubmitting}
           >
-            {isEditing ? 'Save Changes' : 'Add Instance'}
+            {isSubmitting 
+              ? (isEditing ? 'Saving...' : 'Adding...') 
+              : (isEditing ? 'Save Changes' : 'Add GitHub Account')}
           </button>
           
-          {isEditing && (
+          {isEditing && onCancel && (
             <button
               type="button"
-              onClick={handleCancel}
-              className="py-2 px-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-md"
+              onClick={onCancel}
+              className="flex-1 bg-muted text-muted-foreground font-medium p-2 rounded hover:opacity-90 transition-opacity"
             >
               Cancel
             </button>

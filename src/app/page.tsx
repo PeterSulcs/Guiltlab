@@ -4,14 +4,15 @@ import GitHubInstanceForm from "@/components/GitHubInstanceForm";
 import GitHubInstanceList from "@/components/GitHubInstanceList";
 import Heatmap from "@/components/Heatmap";
 import Leaderboard from "@/components/Leaderboard";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-100">
-      <header className="bg-blue-600 text-white p-6">
+    <main className="min-h-screen bg-background">
+      <header className="bg-primary text-primary-foreground p-6">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold">GuiltLab</h1>
-          <p className="text-blue-100">Aggregate your GitLab and GitHub contributions across multiple instances</p>
+          <p className="opacity-80">Aggregate your GitLab and GitHub contributions across multiple instances</p>
         </div>
       </header>
 
@@ -31,14 +32,16 @@ export default function Home() {
         </div>
       </div>
       
-      <footer className="bg-gray-800 text-white p-6 mt-8">
+      <footer className="bg-muted text-muted-foreground p-6 mt-8">
         <div className="container mx-auto text-center">
           <p>&copy; {new Date().getFullYear()} GuiltLab - GitLab & GitHub Heatmap Aggregator</p>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="opacity-70 text-sm mt-1">
             Not affiliated with GitLab Inc. or GitHub Inc.
           </p>
         </div>
       </footer>
+      
+      <ThemeToggle />
     </main>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { RepoProvider } from "../lib/repoContext";
+import { ThemeProvider } from "../lib/themeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,11 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <RepoProvider>
-          {children}
-        </RepoProvider>
+        <ThemeProvider>
+          <RepoProvider>
+            {children}
+          </RepoProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
