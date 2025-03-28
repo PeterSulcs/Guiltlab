@@ -17,12 +17,18 @@
   --input: #f6f8fa;
   --ring: #0969da;
   
-  /* Heatmap colors - light mode */
+  /* Heatmap colors - light mode (10 levels) with higher contrast */
   --color-empty: #ebedf0;
-  --color-scale-1: #9be9a8;
-  --color-scale-2: #40c463;
-  --color-scale-3: #30a14e;
-  --color-scale-4: #216e39;
+  --color-scale-1: #d0e094;
+  --color-scale-2: #b3d174;
+  --color-scale-3: #95c159;
+  --color-scale-4: #78b141;
+  --color-scale-5: #5ba12d;
+  --color-scale-6: #419119;
+  --color-scale-7: #2f7711;
+  --color-scale-8: #225d0e;
+  --color-scale-9: #16450a;
+  --color-scale-10: #0c2d07;
 }
 
 .dark {
@@ -42,13 +48,32 @@
   --input: #010409;
   --ring: #58a6ff;
   
-  /* Heatmap colors - dark mode */
+  /* Heatmap colors - dark mode (10 levels) with higher contrast */
   --color-empty: #161b22;
   --color-scale-1: #0e4429;
   --color-scale-2: #006d32;
   --color-scale-3: #26a641;
   --color-scale-4: #39d353;
+  --color-scale-5: #4ae564;
+  --color-scale-6: #73eb86;
+  --color-scale-7: #8eed9a;
+  --color-scale-8: #a7f3ae;
+  --color-scale-9: #c6f8ca;
+  --color-scale-10: #dffce0;
 }
+
+/* Add explicit global styles to ensure react-calendar-heatmap picks up colors */
+.react-calendar-heatmap .color-empty { fill: var(--color-empty) !important; }
+.react-calendar-heatmap .color-scale-1 { fill: var(--color-scale-1) !important; }
+.react-calendar-heatmap .color-scale-2 { fill: var(--color-scale-2) !important; }
+.react-calendar-heatmap .color-scale-3 { fill: var(--color-scale-3) !important; }
+.react-calendar-heatmap .color-scale-4 { fill: var(--color-scale-4) !important; }
+.react-calendar-heatmap .color-scale-5 { fill: var(--color-scale-5) !important; }
+.react-calendar-heatmap .color-scale-6 { fill: var(--color-scale-6) !important; }
+.react-calendar-heatmap .color-scale-7 { fill: var(--color-scale-7) !important; }
+.react-calendar-heatmap .color-scale-8 { fill: var(--color-scale-8) !important; }
+.react-calendar-heatmap .color-scale-9 { fill: var(--color-scale-9) !important; }
+.react-calendar-heatmap .color-scale-10 { fill: var(--color-scale-10) !important; }
 
 @media (prefers-color-scheme: dark) {
   :root {

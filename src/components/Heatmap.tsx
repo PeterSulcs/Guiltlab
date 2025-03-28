@@ -187,50 +187,59 @@ export default function Heatmap() {
   }, [gitlabInstances, githubInstances, loading, dateRange.startDateString, dateRange.endDateString]);
 
   // Find the maximum contribution count in the current data
-  const { maxContributionCount, quartiles } = useMemo(() => {
-    if (aggregatedData.length === 0) return { maxContributionCount: 0, quartiles: [0, 0, 0] };
+  const maxContributionCount = useMemo(() => {
+    if (aggregatedData.length === 0) return 0;
     
-    // Get non-zero counts and sort them
-    const nonZeroCounts = aggregatedData
-      .filter(item => item.count > 0)
-      .map(item => item.count)
-      .sort((a, b) => a - b);
+    // Find the maximum contribution count
+    const max = Math.max(...aggregatedData.map(item => item.count));
+    console.log(`Max contribution count: ${max}`);
     
-    if (nonZeroCounts.length === 0) {
-      return { maxContributionCount: 0, quartiles: [0, 0, 0] };
-    }
+    // Log distribution of contributions for debugging
+    const counts: Record<number, number> = {};
+    aggregatedData.forEach(item => {
+      counts[item.count] = (counts[item.count] || 0) + 1;
+    });
+    console.log("Distribution of contribution counts:", counts);
     
-    // Calculate quartiles for better distribution
-    const q1Index = Math.floor(nonZeroCounts.length * 0.25);
-    const q2Index = Math.floor(nonZeroCounts.length * 0.5);
-    const q3Index = Math.floor(nonZeroCounts.length * 0.75);
-    
-    return {
-      maxContributionCount: nonZeroCounts[nonZeroCounts.length - 1],
-      quartiles: [
-        nonZeroCounts[q1Index] || 1,
-        nonZeroCounts[q2Index] || 2,
-        nonZeroCounts[q3Index] || 3
-      ]
-    };
+    return max;
   }, [aggregatedData]);
   
-  // Log quartile values for debugging
+  // Log max value for debugging
   useEffect(() => {
     if (aggregatedData.length > 0) {
-      console.log(`Contribution stats - Max: ${maxContributionCount}, Quartiles: ${quartiles.join(', ')}`);
+      console.log(`Contribution stats - Max: ${maxContributionCount}`);
     }
-  }, [maxContributionCount, quartiles, aggregatedData]);
+  }, [maxContributionCount, aggregatedData]);
 
-  // Calculate color based on count using quartiles for better distribution
+  // Calculate color based on a more robust gradient scale
   const getColor = (count: number) => {
     if (count === 0) return 'color-empty';
     
-    // Use quartile-based distribution for more variation
-    if (count <= quartiles[0]) return 'color-scale-1';
-    if (count <= quartiles[1]) return 'color-scale-2';
-    if (count <= quartiles[2]) return 'color-scale-3';
-    return 'color-scale-4';
+    // Ensure we have a valid max (if max is 0, treat any contributions as max)
+    const effectiveMax = maxContributionCount || 1;
+    
+    // Special case: if max is very small (1-3), use fixed colors to ensure visual distinction
+    if (maxContributionCount <= 3) {
+      if (count === 1) return 'color-scale-3';
+      if (count === 2) return 'color-scale-6';
+      return 'color-scale-10';
+    }
+    
+    // Calculate percentage of max (0 to 1)
+    const percentage = count / effectiveMax;
+    console.log(`Color for count ${count}/${effectiveMax} = ${percentage * 100}%`);
+    
+    // Create 10 levels of color intensity with logarithmic scale for better visual differentiation
+    if (percentage <= 0.05) return 'color-scale-1';
+    if (percentage <= 0.1) return 'color-scale-2';
+    if (percentage <= 0.2) return 'color-scale-3';
+    if (percentage <= 0.3) return 'color-scale-4';
+    if (percentage <= 0.4) return 'color-scale-5';
+    if (percentage <= 0.5) return 'color-scale-6';
+    if (percentage <= 0.6) return 'color-scale-7';
+    if (percentage <= 0.7) return 'color-scale-8';
+    if (percentage <= 0.85) return 'color-scale-9';
+    return 'color-scale-10';
   };
 
   if (gitlabInstances.length === 0 && githubInstances.length === 0) {
@@ -287,11 +296,17 @@ export default function Heatmap() {
       {!isLoading && !error && (
         <div className="heatmap-container">
           <style jsx>{`
-            .color-empty { fill: var(--color-empty); }
-            .color-scale-1 { fill: var(--color-scale-1); }
-            .color-scale-2 { fill: var(--color-scale-2); }
-            .color-scale-3 { fill: var(--color-scale-3); }
-            .color-scale-4 { fill: var(--color-scale-4); }
+            .color-empty { fill: var(--color-empty) !important; }
+            .color-scale-1 { fill: var(--color-scale-1) !important; }
+            .color-scale-2 { fill: var(--color-scale-2) !important; }
+            .color-scale-3 { fill: var(--color-scale-3) !important; }
+            .color-scale-4 { fill: var(--color-scale-4) !important; }
+            .color-scale-5 { fill: var(--color-scale-5) !important; }
+            .color-scale-6 { fill: var(--color-scale-6) !important; }
+            .color-scale-7 { fill: var(--color-scale-7) !important; }
+            .color-scale-8 { fill: var(--color-scale-8) !important; }
+            .color-scale-9 { fill: var(--color-scale-9) !important; }
+            .color-scale-10 { fill: var(--color-scale-10) !important; }
             
             /* Override react-calendar-heatmap styles for dark mode */
             :global(.react-calendar-heatmap) {
@@ -302,6 +317,19 @@ export default function Heatmap() {
               fill: var(--foreground);
               font-size: 10px;
             }
+            
+            /* Make sure colors are applied */
+            :global(.react-calendar-heatmap .color-empty) { fill: var(--color-empty) !important; }
+            :global(.react-calendar-heatmap .color-scale-1) { fill: var(--color-scale-1) !important; }
+            :global(.react-calendar-heatmap .color-scale-2) { fill: var(--color-scale-2) !important; }
+            :global(.react-calendar-heatmap .color-scale-3) { fill: var(--color-scale-3) !important; }
+            :global(.react-calendar-heatmap .color-scale-4) { fill: var(--color-scale-4) !important; }
+            :global(.react-calendar-heatmap .color-scale-5) { fill: var(--color-scale-5) !important; }
+            :global(.react-calendar-heatmap .color-scale-6) { fill: var(--color-scale-6) !important; }
+            :global(.react-calendar-heatmap .color-scale-7) { fill: var(--color-scale-7) !important; }
+            :global(.react-calendar-heatmap .color-scale-8) { fill: var(--color-scale-8) !important; }
+            :global(.react-calendar-heatmap .color-scale-9) { fill: var(--color-scale-9) !important; }
+            :global(.react-calendar-heatmap .color-scale-10) { fill: var(--color-scale-10) !important; }
           `}</style>
           
           <CalendarHeatmap
@@ -312,7 +340,14 @@ export default function Heatmap() {
               if (!value || value.count === 0) {
                 return 'color-empty';
               }
-              return getColor(value.count);
+              
+              // Get color class
+              const colorClass = getColor(value.count);
+              
+              // Log for debugging
+              console.log(`Date ${value.date}: count=${value.count}, class=${colorClass}`);
+              
+              return colorClass;
             }}
             tooltipDataAttrs={(value) => {
               if (!value || !value.date) {
@@ -371,9 +406,9 @@ export default function Heatmap() {
             <span className="mr-1">Less</span>
             <div className="w-3 h-3 rounded-sm color-empty mr-1"></div>
             <div className="w-3 h-3 rounded-sm color-scale-1 mr-1"></div>
-            <div className="w-3 h-3 rounded-sm color-scale-2 mr-1"></div>
             <div className="w-3 h-3 rounded-sm color-scale-3 mr-1"></div>
-            <div className="w-3 h-3 rounded-sm color-scale-4 mr-1"></div>
+            <div className="w-3 h-3 rounded-sm color-scale-6 mr-1"></div>
+            <div className="w-3 h-3 rounded-sm color-scale-10 mr-1"></div>
             <span>More</span>
           </div>
         </div>
