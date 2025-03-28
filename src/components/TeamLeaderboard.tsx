@@ -19,7 +19,6 @@ export default function TeamLeaderboard() {
   const [leaderboardData, setLeaderboardData] = useState<TeamLeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     // Skip if there are no team members or GitLab instances
@@ -100,11 +99,6 @@ export default function TeamLeaderboard() {
         leaderboardEntries.sort((a, b) => b.totalContributions - a.totalContributions);
         
         setLeaderboardData(leaderboardEntries);
-        
-        // Select the top contributor by default if no selection exists
-        if (leaderboardEntries.length > 0 && !selectedMemberId) {
-          setSelectedMemberId(leaderboardEntries[0].member.id);
-        }
       } catch (error) {
         console.error('Error fetching team leaderboard data:', error);
         setError('Failed to fetch team contribution data. Please check your team members and GitLab instances.');
@@ -115,19 +109,6 @@ export default function TeamLeaderboard() {
 
     fetchLeaderboardData();
   }, [teamMembers, gitlabInstances, dateRange, teamLoading, repoLoading]);
-
-  // Get selected member's heatmap data
-  const selectedMemberData = selectedMemberId
-    ? leaderboardData.find(entry => entry.member.id === selectedMemberId)
-    : null;
-
-  // Prepare heatmap values
-  const heatmapValues = selectedMemberData
-    ? selectedMemberData.contributionsByDate.map(item => ({
-        date: item.date,
-        count: item.count
-      }))
-    : [];
 
   // Calculate color based on contribution count
   const getColorClass = (count: number) => {
@@ -190,10 +171,7 @@ export default function TeamLeaderboard() {
                 {leaderboardData.map((entry, index) => (
                   <tr 
                     key={entry.member.id}
-                    className={`border-b border-border hover:bg-background/50 cursor-pointer ${
-                      selectedMemberId === entry.member.id ? 'bg-background' : ''
-                    }`}
-                    onClick={() => setSelectedMemberId(entry.member.id)}
+                    className="border-b border-border hover:bg-background/50"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center">
@@ -228,15 +206,15 @@ export default function TeamLeaderboard() {
         )}
       </div>
 
-      {/* Selected Member Heatmap */}
-      {selectedMemberData && (
-        <div className="bg-card-background rounded-lg shadow border border-border p-6">
+      {/* Individual Member Heatmaps */}
+      {!isLoading && !error && leaderboardData.map((entry) => (
+        <div key={entry.member.id} className="bg-card-background rounded-lg shadow border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">
-              {selectedMemberData.member.name}'s Contributions
+              {entry.member.name}'s Contributions
             </h2>
             <p className="text-sm text-muted-foreground">
-              {selectedMemberData.totalContributions} contributions in {dateRange.label}
+              {entry.totalContributions} contributions in {dateRange.label}
             </p>
           </div>
 
@@ -268,7 +246,10 @@ export default function TeamLeaderboard() {
             <CalendarHeatmap
               startDate={dateRange.startDate}
               endDate={dateRange.endDate}
-              values={heatmapValues}
+              values={entry.contributionsByDate.map(item => ({
+                date: item.date,
+                count: item.count
+              }))}
               classForValue={(value) => {
                 if (!value || value.count === 0) {
                   return 'color-empty';
@@ -277,20 +258,20 @@ export default function TeamLeaderboard() {
               }}
               tooltipDataAttrs={(value) => {
                 if (!value || !value.date) {
-                  return { 'data-tooltip-id': 'team-heatmap-tooltip' } as any;
+                  return { 'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}` } as any;
                 }
 
                 const date = new Date(value.date);
                 const formattedDate = date.toLocaleDateString();
                 
                 return {
-                  'data-tooltip-id': 'team-heatmap-tooltip',
+                  'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}`,
                   'data-tooltip-content': `${formattedDate}: ${value.count} contributions`,
                 } as any;
               }}
             />
             
-            <Tooltip id="team-heatmap-tooltip" />
+            <Tooltip id={`team-heatmap-tooltip-${entry.member.id}`} />
             
             <div className="flex justify-end items-center mt-2 text-xs">
               <span className="mr-1">Less</span>
@@ -303,7 +284,7 @@ export default function TeamLeaderboard() {
             </div>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 } 

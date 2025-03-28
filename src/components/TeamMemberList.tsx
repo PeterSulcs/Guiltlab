@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTeam } from '../lib/teamContext';
-import { FiEdit2, FiTrash2, FiUser } from 'react-icons/fi';
+import { FiTrash2, FiUser } from 'react-icons/fi';
 
 export default function TeamMemberList() {
   const { teamMembers, removeTeamMember, loading } = useTeam();
