@@ -404,11 +404,11 @@ export default function Heatmap() {
           
           <div className="flex justify-end items-center mt-2 text-xs">
             <span className="mr-1">Less</span>
-            <div className="w-3 h-3 rounded-sm color-empty mr-1"></div>
-            <div className="w-3 h-3 rounded-sm color-scale-1 mr-1"></div>
-            <div className="w-3 h-3 rounded-sm color-scale-3 mr-1"></div>
-            <div className="w-3 h-3 rounded-sm color-scale-6 mr-1"></div>
-            <div className="w-3 h-3 rounded-sm color-scale-10 mr-1"></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-empty)' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-1)' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-3)' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-6)' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-10)' }}></div>
             <span>More</span>
           </div>
         </div>
