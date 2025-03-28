@@ -48,7 +48,7 @@ jobs:
       # Create release configuration
       - name: Create .releaserc
         run: |
-          cat > .releaserc << EOF
+          cat > .releaserc << 'EOF'
           {
             "branches": ["main"],
             "plugins": [
