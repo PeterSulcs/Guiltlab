@@ -273,7 +273,7 @@ async function fetchUserProjects(
   }
 }
 
-// Helper to fetch commits for a project
+// Function to fetch commits for a project by a specific user
 async function fetchProjectCommits(
   instance: GitLabInstance,
   projectId: number,
@@ -282,11 +282,15 @@ async function fetchProjectCommits(
   endDate: string
 ): Promise<any[]> {
   try {
+    console.log(`Fetching commits for project ${projectId} by user ${username}...`);
+    
+    // Fetch commits for this project filtered by the specified author (username)
     let allCommits: any[] = [];
     let page = 1;
     let hasMoreCommits = true;
     
-    while (hasMoreCommits) {
+    // For simplicity, limiting to 3 pages (approx 300 commits)
+    while (hasMoreCommits && page <= 3) {
       const response = await axios.get(
         `${instance.baseUrl}/api/v4/projects/${projectId}/repository/commits`,
         {
@@ -294,11 +298,11 @@ async function fetchProjectCommits(
             'Private-Token': instance.token
           },
           params: {
-            per_page: 100,
-            page: page,
             since: startDate,
             until: endDate,
-            author: username
+            author: username,  // Filter by the author's name or email
+            per_page: 100,
+            page: page
           }
         }
       );
@@ -311,17 +315,14 @@ async function fetchProjectCommits(
         allCommits = [...allCommits, ...commits];
         page++;
         
+        // If we got fewer than the max per page, we're done
         if (commits.length < 100) {
-          hasMoreCommits = false;
-        }
-        
-        // Limit to 3 pages to avoid rate limiting
-        if (page > 3) {
           hasMoreCommits = false;
         }
       }
     }
     
+    console.log(`Found ${allCommits.length} commits for project ${projectId} by user ${username}`);
     return allCommits;
   } catch (error) {
     console.error(`Error fetching commits for project ${projectId}:`, error);
@@ -403,7 +404,38 @@ async function fetchContributionsFromEvents(
   endDate: string,
   overrideUsername?: string
 ): Promise<ContributionData[]> {
-  console.log(`Falling back to events API for ${instance.name} from ${startDate} to ${endDate}`);
+  // If we have an override username, we need to first get that user's ID
+  let targetUserId = user.id;
+  
+  if (overrideUsername && overrideUsername !== user.username) {
+    try {
+      console.log(`Looking up user ID for override username: ${overrideUsername}`);
+      // First, try to find the user by username
+      const userResponse = await axios.get(
+        `${instance.baseUrl}/api/v4/users`,
+        {
+          headers: {
+            'Private-Token': instance.token
+          },
+          params: {
+            username: overrideUsername
+          }
+        }
+      );
+      
+      if (userResponse.data && userResponse.data.length > 0) {
+        targetUserId = userResponse.data[0].id;
+        console.log(`Found user ID ${targetUserId} for username ${overrideUsername}`);
+      } else {
+        console.log(`Could not find user ID for username ${overrideUsername}, using authenticated user as fallback`);
+      }
+    } catch (error) {
+      console.error(`Error looking up user ID for ${overrideUsername}:`, error);
+      console.log(`Falling back to authenticated user ID: ${user.id}`);
+    }
+  }
+  
+  console.log(`Falling back to events API for ${instance.name} from ${startDate} to ${endDate} for user ID: ${targetUserId}`);
   
   // Ensure dates are in the format GitLab expects (YYYY-MM-DD)
   const formattedStartDate = startDate;
@@ -421,12 +453,12 @@ async function fetchContributionsFromEvents(
     'pushed', 'merged', 'created', 'commented', 'opened'
   ];
   
-  console.log(`GitLab API URL: ${instance.baseUrl}/api/v4/users/${user.id}/events?after=${formattedStartDate}&before=${formattedEndDate}`);
+  console.log(`GitLab API URL: ${instance.baseUrl}/api/v4/users/${targetUserId}/events?after=${formattedStartDate}&before=${formattedEndDate}`);
   
   while (hasMoreEvents && !reachedRateLimit) {
     try {
       const response = await axios.get(
-        `${instance.baseUrl}/api/v4/users/${user.id}/events`,
+        `${instance.baseUrl}/api/v4/users/${targetUserId}/events`,
         {
           headers: {
             'Private-Token': instance.token
