@@ -47,7 +47,7 @@ yarn dev
 
 1. Add your GitLab instances using the form on the left side.
    - You'll need to provide a name for the instance, the base URL (e.g., `https://gitlab.com`), and a personal access token.
-   - The token should have `api`, `read_user`, and `read_api` scopes.
+   - The token should have `read_user` and `read_api` scopes.
 
 2. Once you've added your instances, the heatmap and leaderboard will automatically populate with your contribution data.
 
