@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useGitLab } from '../lib/gitlabContext';
+import { useRepo } from '../lib/repoContext';
 import { fetchContributions, fetchGitLabUser } from '../lib/gitlabApi';
+import { fetchGitHubContributions, fetchGitHubUser } from '../lib/githubApi';
 import { LeaderboardEntry, UserData } from '../types';
 
 export default function Leaderboard() {
-  const { instances, loading } = useGitLab();
+  const { gitlabInstances, githubInstances, loading } = useRepo();
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +25,7 @@ export default function Leaderboard() {
   const endDateString = tomorrowDate.toISOString().split('T')[0];
 
   useEffect(() => {
-    if (instances.length === 0 || loading) return;
+    if ((gitlabInstances.length === 0 && githubInstances.length === 0) || loading) return;
     
     const fetchData = async () => {
       setIsLoading(true);
@@ -38,8 +39,8 @@ export default function Leaderboard() {
           instances: { instanceId: string; contributions: number }[];
         }>();
         
-        // Process each instance
-        for (const instance of instances) {
+        // Process each GitLab instance
+        for (const instance of gitlabInstances) {
           try {
             // Fetch user data
             const userData = await fetchGitLabUser(instance);
@@ -68,7 +69,41 @@ export default function Leaderboard() {
               });
             }
           } catch (err) {
-            console.error(`Error processing instance ${instance.name}:`, err);
+            console.error(`Error processing GitLab instance ${instance.name}:`, err);
+          }
+        }
+        
+        // Process each GitHub instance
+        for (const instance of githubInstances) {
+          try {
+            // Fetch user data
+            const userData = await fetchGitHubUser(instance);
+            const userKey = `${userData.username}-${userData.email}`;
+            
+            // Fetch contributions
+            const contributions = await fetchGitHubContributions(instance, startDateString, endDateString);
+            const totalContributionsForInstance = contributions.reduce((sum, c) => sum + c.count, 0);
+            
+            // Add or update user in the map
+            if (usersMap.has(userKey)) {
+              const existingUser = usersMap.get(userKey)!;
+              existingUser.totalContributions += totalContributionsForInstance;
+              existingUser.instances.push({
+                instanceId: instance.id,
+                contributions: totalContributionsForInstance
+              });
+            } else {
+              usersMap.set(userKey, {
+                user: userData,
+                totalContributions: totalContributionsForInstance,
+                instances: [{
+                  instanceId: instance.id,
+                  contributions: totalContributionsForInstance
+                }]
+              });
+            }
+          } catch (err) {
+            console.error(`Error processing GitHub instance ${instance.name}:`, err);
           }
         }
         
@@ -86,13 +121,13 @@ export default function Leaderboard() {
     };
     
     fetchData();
-  }, [instances, loading, startDateString, endDateString]);
+  }, [gitlabInstances, githubInstances, loading, startDateString, endDateString]);
 
-  if (instances.length === 0) {
+  if (gitlabInstances.length === 0 && githubInstances.length === 0) {
     return (
       <div className="p-4 bg-white rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">Contribution Leaderboard</h2>
-        <p className="text-gray-500">Add GitLab instances to see the leaderboard.</p>
+        <p className="text-gray-500">Add GitLab or GitHub instances to see the leaderboard.</p>
       </div>
     );
   }
@@ -163,10 +198,18 @@ export default function Leaderboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <ul>
                           {entry.instances.map(instance => {
-                            const instanceInfo = instances.find(i => i.id === instance.instanceId);
+                            // Find instance info - could be GitLab or GitHub
+                            let instanceInfo: any = gitlabInstances.find(i => i.id === instance.instanceId);
+                            let instanceType = 'GitLab';
+                            
+                            if (!instanceInfo) {
+                              instanceInfo = githubInstances.find(i => i.id === instance.instanceId);
+                              instanceType = 'GitHub';
+                            }
+                            
                             return (
                               <li key={instance.instanceId}>
-                                {instanceInfo?.name}: {instance.contributions}
+                                {instanceInfo?.name} ({instanceType}): {instance.contributions}
                               </li>
                             );
                           })}

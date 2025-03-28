@@ -1,13 +1,13 @@
 # GuiltLab
 
-GuiltLab is a Next.js application that aggregates and visualizes your contributions across multiple GitLab instances. See all your contributions in one place with a unified heatmap and leaderboard.
+GuiltLab is a Next.js application that aggregates and visualizes your contributions across multiple GitLab and GitHub instances. See all your contributions in one place with a unified heatmap and leaderboard.
 
 ## Features
 
-- Connect to multiple GitLab instances using personal access tokens
+- Connect to multiple GitLab and GitHub instances using personal access tokens
 - View an aggregated heatmap of your contributions across all instances
 - See a leaderboard of contributions
-- Secure storage of your GitLab instance configurations in your browser's localStorage
+- Secure storage of your repository instance configurations in your browser's localStorage
 
 ## Getting Started
 
@@ -49,9 +49,13 @@ yarn dev
    - You'll need to provide a name for the instance, the base URL (e.g., `https://gitlab.com`), and a personal access token.
    - The token should have `read_user` and `read_api` scopes.
 
-2. Once you've added your instances, the heatmap and leaderboard will automatically populate with your contribution data.
+2. Add your GitHub instances using the GitHub form.
+   - You'll need to provide a name for the instance, your GitHub username, and a personal access token.
+   - The token should have `read:user` scope.
 
-3. Hover over the heatmap cells to see details about your contributions for each day.
+3. Once you've added your instances, the heatmap and leaderboard will automatically populate with your aggregated contribution data.
+
+4. Hover over the heatmap cells to see details about your contributions for each day, including breakdowns by instance.
 
 ## Security
 

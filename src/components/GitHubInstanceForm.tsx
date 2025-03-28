@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRepo } from '../lib/repoContext';
-import { GitLabInstance } from '../types';
+import { GitHubInstance } from '../types';
 
-interface InstanceFormProps {
-  instanceToEdit?: GitLabInstance;
+interface GitHubInstanceFormProps {
+  instanceToEdit?: GitHubInstance;
   onCancel?: () => void;
 }
 
-export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormProps) {
-  const { addGitLabInstance, editGitLabInstance } = useRepo();
+export default function GitHubInstanceForm({ instanceToEdit, onCancel }: GitHubInstanceFormProps) {
+  const { addGitHubInstance, editGitHubInstance } = useRepo();
   const [formData, setFormData] = useState({
     name: '',
-    baseUrl: '',
+    username: '',
     token: ''
   });
   const [error, setError] = useState('');
@@ -24,7 +24,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
     if (instanceToEdit) {
       setFormData({
         name: instanceToEdit.name,
-        baseUrl: instanceToEdit.baseUrl,
+        username: instanceToEdit.username,
         token: instanceToEdit.token
       });
     }
@@ -42,48 +42,43 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
     setError('');
 
     // Validate form
-    if (!formData.name || !formData.baseUrl || !formData.token) {
+    if (!formData.name || !formData.username || !formData.token) {
       setError('All fields are required');
       return;
     }
 
-    // Remove trailing slash from baseUrl if present
-    const baseUrl = formData.baseUrl.endsWith('/')
-      ? formData.baseUrl.slice(0, -1)
-      : formData.baseUrl;
-
     try {
       if (isEditing && instanceToEdit) {
         // Update the instance
-        editGitLabInstance(instanceToEdit.id, {
+        editGitHubInstance(instanceToEdit.id, {
           name: formData.name,
-          baseUrl,
+          username: formData.username,
           token: formData.token
         });
         
         if (onCancel) onCancel(); // Close the edit form
       } else {
         // Create the instance object
-        const newInstance: GitLabInstance = {
+        const newInstance: GitHubInstance = {
           id: crypto.randomUUID(),
           name: formData.name,
-          baseUrl,
+          username: formData.username,
           token: formData.token
         };
         
         // Add the instance
-        addGitLabInstance(newInstance);
+        addGitHubInstance(newInstance);
         
         // Reset form
         setFormData({
           name: '',
-          baseUrl: '',
+          username: '',
           token: ''
         });
       }
     } catch (error) {
-      setError('Failed to add GitLab instance. Please check your credentials and try again.');
-      console.error('Error adding instance:', error);
+      setError('Failed to add GitHub instance. Please check your credentials and try again.');
+      console.error('Error adding GitHub instance:', error);
     }
   };
 
@@ -94,7 +89,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       <h2 className="text-xl font-semibold mb-4">
-        {isEditing ? 'Edit GitLab Instance' : 'Add GitLab Instance'}
+        {isEditing ? 'Edit GitHub Instance' : 'Add GitHub Instance'}
       </h2>
       
       {error && (
@@ -115,22 +110,22 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
             value={formData.name}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="My GitLab"
+            placeholder="My GitHub"
           />
         </div>
         
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1" htmlFor="baseUrl">
-            Base URL
+          <label className="block text-sm font-medium mb-1" htmlFor="username">
+            GitHub Username
           </label>
           <input
-            type="url"
-            id="baseUrl"
-            name="baseUrl"
-            value={formData.baseUrl}
+            type="text"
+            id="username"
+            name="username"
+            value={formData.username}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="https://gitlab.example.com"
+            placeholder="octocat"
           />
         </div>
         
@@ -148,7 +143,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
             placeholder="Your personal access token"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Token needs read_user and read_api scopes
+            Token needs read:user scope for contributions data
           </p>
         </div>
         

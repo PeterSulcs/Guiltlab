@@ -5,6 +5,22 @@ export interface GitLabInstance {
   token: string;
 }
 
+export interface GitHubInstance {
+  id: string;
+  name: string;
+  username: string;
+  token: string;
+}
+
+export interface RepoInstance {
+  id: string;
+  name: string;
+  type: 'gitlab' | 'github';
+  baseUrl?: string;
+  username?: string;
+  token: string;
+}
+
 export interface ContributionData {
   date: string;
   count: number;

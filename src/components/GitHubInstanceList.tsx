@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { useRepo } from '../lib/repoContext';
-import { GitLabInstance } from '../types';
-import InstanceForm from './InstanceForm';
+import { GitHubInstance } from '../types';
+import GitHubInstanceForm from './GitHubInstanceForm';
 
-export default function InstanceList() {
-  const { gitlabInstances, removeGitLabInstance } = useRepo();
-  const [editingInstance, setEditingInstance] = useState<GitLabInstance | null>(null);
+export default function GitHubInstanceList() {
+  const { githubInstances, removeGitHubInstance } = useRepo();
+  const [editingInstance, setEditingInstance] = useState<GitHubInstance | null>(null);
 
-  const handleEdit = (instance: GitLabInstance) => {
+  const handleEdit = (instance: GitHubInstance) => {
     setEditingInstance(instance);
   };
 
@@ -17,11 +17,11 @@ export default function InstanceList() {
     setEditingInstance(null);
   };
 
-  if (gitlabInstances.length === 0) {
+  if (githubInstances.length === 0) {
     return (
       <div className="p-4 bg-white rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">GitLab Instances</h2>
-        <p className="text-gray-500">No GitLab instances added yet. Add one to get started.</p>
+        <h2 className="text-xl font-semibold mb-4">GitHub Instances</h2>
+        <p className="text-gray-500">No GitHub instances added yet. Add one to aggregate GitHub contributions.</p>
       </div>
     );
   }
@@ -29,8 +29,8 @@ export default function InstanceList() {
   if (editingInstance) {
     return (
       <div className="p-4 bg-white rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Edit GitLab Instance</h2>
-        <InstanceForm 
+        <h2 className="text-xl font-semibold mb-4">Edit GitHub Instance</h2>
+        <GitHubInstanceForm 
           instanceToEdit={editingInstance} 
           onCancel={handleCancelEdit} 
         />
@@ -40,15 +40,15 @@ export default function InstanceList() {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4">GitLab Instances</h2>
+      <h2 className="text-xl font-semibold mb-4">GitHub Instances</h2>
       
       <ul className="divide-y divide-gray-200">
-        {gitlabInstances.map(instance => (
+        {githubInstances.map(instance => (
           <li key={instance.id} className="py-3">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium">{instance.name}</h3>
-                <p className="text-sm text-gray-500">{instance.baseUrl}</p>
+                <p className="text-sm text-gray-500">@{instance.username}</p>
               </div>
               <div className="flex space-x-2">
                 <button
@@ -58,7 +58,7 @@ export default function InstanceList() {
                   Edit
                 </button>
                 <button
-                  onClick={() => removeGitLabInstance(instance.id)}
+                  onClick={() => removeGitHubInstance(instance.id)}
                   className="text-red-600 hover:text-red-800 text-sm font-medium"
                 >
                   Remove

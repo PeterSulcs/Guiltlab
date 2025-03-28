@@ -1,5 +1,7 @@
 import InstanceForm from "@/components/InstanceForm";
 import InstanceList from "@/components/InstanceList";
+import GitHubInstanceForm from "@/components/GitHubInstanceForm";
+import GitHubInstanceList from "@/components/GitHubInstanceList";
 import Heatmap from "@/components/Heatmap";
 import Leaderboard from "@/components/Leaderboard";
 
@@ -9,7 +11,7 @@ export default function Home() {
       <header className="bg-blue-600 text-white p-6">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold">GuiltLab</h1>
-          <p className="text-blue-100">Aggregate your GitLab contributions across multiple instances</p>
+          <p className="text-blue-100">Aggregate your GitLab and GitHub contributions across multiple instances</p>
         </div>
       </header>
 
@@ -18,6 +20,8 @@ export default function Home() {
           <div className="md:col-span-1 space-y-6">
             <InstanceForm />
             <InstanceList />
+            <GitHubInstanceForm />
+            <GitHubInstanceList />
           </div>
           
           <div className="md:col-span-2 space-y-6">
@@ -29,9 +33,9 @@ export default function Home() {
       
       <footer className="bg-gray-800 text-white p-6 mt-8">
         <div className="container mx-auto text-center">
-          <p>&copy; {new Date().getFullYear()} GuiltLab - GitLab Heatmap Aggregator</p>
+          <p>&copy; {new Date().getFullYear()} GuiltLab - GitLab & GitHub Heatmap Aggregator</p>
           <p className="text-gray-400 text-sm mt-1">
-            Not affiliated with GitLab Inc.
+            Not affiliated with GitLab Inc. or GitHub Inc.
           </p>
         </div>
       </footer>

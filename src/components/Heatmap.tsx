@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip } from 'react-tooltip';
-import { useGitLab } from '../lib/gitlabContext';
-import { fetchContributions, aggregateContributions } from '../lib/gitlabApi';
+import { useRepo } from '../lib/repoContext';
+import { fetchContributions } from '../lib/gitlabApi';
+import { fetchGitHubContributions } from '../lib/githubApi';
 import { AggregatedContribution } from '../types';
 
 type ReactCalendarHeatmapValue = {
@@ -15,7 +16,7 @@ type ReactCalendarHeatmapValue = {
 };
 
 export default function Heatmap() {
-  const { instances, loading } = useGitLab();
+  const { gitlabInstances, githubInstances, loading } = useRepo();
   const [aggregatedData, setAggregatedData] = useState<AggregatedContribution[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,8 +33,42 @@ export default function Heatmap() {
   const startDateString = startDate.toISOString().split('T')[0];
   const endDateString = tomorrowDate.toISOString().split('T')[0];
 
+  // We're still using the aggregateContributions function, but importing it locally
+  // since it doesn't need to change
+  const aggregateContributions = (
+    contributionsArray: any[][]
+  ): Map<string, { count: number, contributions: { instanceId: string, count: number }[] }> => {
+    const aggregatedMap = new Map<string, { 
+      count: number, 
+      contributions: { instanceId: string, count: number }[] 
+    }>();
+    
+    contributionsArray.flat().forEach(contribution => {
+      const existing = aggregatedMap.get(contribution.date);
+      
+      if (existing) {
+        existing.count += contribution.count;
+        existing.contributions.push({
+          instanceId: contribution.instanceId,
+          count: contribution.count
+        });
+      } else {
+        aggregatedMap.set(contribution.date, {
+          count: contribution.count,
+          contributions: [{
+            instanceId: contribution.instanceId,
+            count: contribution.count
+          }]
+        });
+      }
+    });
+    
+    return aggregatedMap;
+  };
+
   useEffect(() => {
-    if (instances.length === 0 || loading) return;
+    // Skip if there are no instances configured yet or if still loading
+    if ((gitlabInstances.length === 0 && githubInstances.length === 0) || loading) return;
     
     const fetchData = async () => {
       setIsLoading(true);
@@ -45,12 +80,19 @@ export default function Heatmap() {
           endDate: endDateString
         });
         
-        // Fetch contributions for each instance
-        const contributionsPromises = instances.map(instance => 
+        // Fetch contributions for each GitLab instance
+        const gitlabContributionsPromises = gitlabInstances.map(instance => 
           fetchContributions(instance, startDateString, endDateString)
         );
         
-        const contributionsResults = await Promise.all(contributionsPromises);
+        // Fetch contributions for each GitHub instance
+        const githubContributionsPromises = githubInstances.map(instance => 
+          fetchGitHubContributions(instance, startDateString, endDateString)
+        );
+        
+        // Wait for all promises to resolve
+        const allPromises = [...gitlabContributionsPromises, ...githubContributionsPromises];
+        const contributionsResults = await Promise.all(allPromises);
         
         // Aggregate contributions
         const aggregatedMap = aggregateContributions(contributionsResults);
@@ -67,14 +109,14 @@ export default function Heatmap() {
         setAggregatedData(formattedData);
       } catch (error) {
         console.error('Error fetching contribution data:', error);
-        setError('Failed to fetch contribution data. Please check your GitLab instances and try again.');
+        setError('Failed to fetch contribution data. Please check your instances and try again.');
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchData();
-  }, [instances, loading, startDateString, endDateString]);
+  }, [gitlabInstances, githubInstances, loading, startDateString, endDateString]);
 
   // Calculate color based on count
   const getColor = (count: number) => {
@@ -85,11 +127,11 @@ export default function Heatmap() {
     return 'color-scale-4';
   };
 
-  if (instances.length === 0) {
+  if (gitlabInstances.length === 0 && githubInstances.length === 0) {
     return (
       <div className="p-4 bg-white rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">Contribution Heatmap</h2>
-        <p className="text-gray-500">Add GitLab instances to see your contribution heatmap.</p>
+        <p className="text-gray-500">Add GitLab or GitHub instances to see your contribution heatmap.</p>
       </div>
     );
   }
@@ -155,8 +197,22 @@ export default function Heatmap() {
               
               if (typedValue.contributions) {
                 typedValue.contributions.forEach((c) => {
-                  const instance = instances.find(i => i.id === c.instanceId);
-                  htmlContent += `<br/>${instance?.name || 'Unknown'}: ${c.count}`;
+                  // Find the instance name - could be GitLab or GitHub
+                  let instanceName = 'Unknown';
+                  
+                  // First check GitLab instances
+                  const gitlabInstance = gitlabInstances.find(i => i.id === c.instanceId);
+                  if (gitlabInstance) {
+                    instanceName = gitlabInstance.name;
+                  } else {
+                    // Then check GitHub instances
+                    const githubInstance = githubInstances.find(i => i.id === c.instanceId);
+                    if (githubInstance) {
+                      instanceName = githubInstance.name;
+                    }
+                  }
+                  
+                  htmlContent += `<br/>${instanceName}: ${c.count}`;
                 });
               }
               
