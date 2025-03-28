@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRepo } from '../lib/repoContext';
 import { GitLabInstance } from '../types';
+import { useRepo } from '@/lib/repoContext';
 
 interface InstanceFormProps {
   instanceToEdit?: GitLabInstance;

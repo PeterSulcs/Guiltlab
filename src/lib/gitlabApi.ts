@@ -134,64 +134,26 @@ export async function fetchContributions(
     
     console.log(`Fetching GitLab contributions for ${instance.name} (${user.username}) from ${startDate} to ${endDate}`);
     
-    // Parse the dates to determine years involved
+    // For older years, we need to try a different approach since the events API has limitations
     const startYear = new Date(startDate).getFullYear();
-    const endYear = new Date(endDate).getFullYear();
-    const yearsToFetch = [];
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
     
-    // Generate array of years to fetch
-    for (let year = startYear; year <= endYear; year++) {
-      yearsToFetch.push(year);
-    }
-    
-    console.log(`Need to fetch contributions for years: ${yearsToFetch.join(', ')}`);
-    
-    // Collection for all contributions across all applicable years
-    let allContributions: ContributionData[] = [];
-    
-    // Skip the calendar API completely and go straight to events API
-    // Calendar API is not available in many GitLab instances and causes errors
-    
-    // Process each year separately for better performance
-    if (yearsToFetch.length > 0) {
-      for (const year of yearsToFetch) {
-        console.log(`Processing year ${year} for ${instance.name} using events API...`);
-        
-        // Calculate the year's date range
-        const yearStart = new Date(year, 0, 1).toISOString().split('T')[0];
-        const yearEnd = new Date(year, 11, 31).toISOString().split('T')[0];
-        
-        // The + 1 day is to ensure we include the last day of the range
-        const nextDay = new Date(new Date(yearEnd).getTime() + 86400000).toISOString().split('T')[0];
-        
-        const yearContributions = await fetchContributionsFromEvents(
-          instance, 
-          user, 
-          yearStart, 
-          nextDay
-        );
-        
-        console.log(`Total for year ${year}: ${yearContributions.length} contribution days`);
-        allContributions = [...allContributions, ...yearContributions];
+    // If date range is not current or last year, try the projects approach for historical data
+    if (startYear < lastYear) {
+      console.log(`Fetching historical data (${startYear}) using projects approach...`);
+      const historicalContributions = await fetchHistoricalContributions(instance, user, startDate, endDate);
+      
+      if (historicalContributions.length > 0) {
+        console.log(`Successfully retrieved ${historicalContributions.length} historical contribution days`);
+        return historicalContributions;
       }
-    } else {
-      // Fall back to events API approach for the entire date range
-      allContributions = await fetchContributionsFromEvents(instance, user, startDate, endDate);
+      
+      console.log(`No historical data found, falling back to events API...`);
     }
     
-    // Apply date filtering to ensure we only return contributions within the requested range
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    
-    const filteredContributions = allContributions.filter(contribution => {
-      const contributionDate = new Date(contribution.date);
-      return contributionDate >= startDateObj && contributionDate <= endDateObj;
-    });
-    
-    console.log(`Final: Found ${filteredContributions.length} contribution days for ${instance.name} from ${startDate} to ${endDate}`);
-    console.log(`Total contribution count for ${instance.name}: ${filteredContributions.reduce((sum, c) => sum + c.count, 0)}`);
-    
-    return filteredContributions;
+    // Fall back to events API for more recent data or if historical approach failed
+    return await fetchContributionsViaEvents(instance, user, startDate, endDate);
   } catch (error) {
     console.error(`Error fetching contributions from ${instance.name}:`, error);
     console.error('Error details:', error);
@@ -200,6 +162,255 @@ export async function fetchContributions(
     // return empty array so the app can continue to function
     return [];
   }
+}
+
+// New approach to fetch historical contributions by analyzing project activity
+async function fetchHistoricalContributions(
+  instance: GitLabInstance,
+  user: UserData,
+  startDate: string,
+  endDate: string
+): Promise<ContributionData[]> {
+  try {
+    // First get all projects the user is a member of
+    console.log(`Fetching projects for ${user.username}...`);
+    
+    const projects = await fetchUserProjects(instance, user.id);
+    console.log(`Found ${projects.length} projects for ${user.username}`);
+    
+    if (projects.length === 0) {
+      return [];
+    }
+    
+    // Process contributions for each project
+    const contributionMap = new Map<string, number>();
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    
+    // Process only the first 5 projects to avoid rate limiting
+    // This is a compromise for historical data
+    const projectsToProcess = projects.slice(0, 5);
+    
+    for (const project of projectsToProcess) {
+      console.log(`Processing project ${project.name} (${project.id})...`);
+      
+      try {
+        // Get all commits by the user in this project
+        const commits = await fetchProjectCommits(
+          instance, 
+          project.id, 
+          user.username,
+          startDate,
+          endDate
+        );
+        
+        console.log(`Found ${commits.length} commits in project ${project.name}`);
+        
+        // Count commits by date
+        commits.forEach(commit => {
+          const commitDate = commit.created_at.split('T')[0];
+          const date = new Date(commitDate);
+          
+          // Ensure the date is within our range
+          if (date >= startDateObj && date <= endDateObj) {
+            contributionMap.set(
+              commitDate, 
+              (contributionMap.get(commitDate) || 0) + 1
+            );
+          }
+        });
+      } catch (error) {
+        console.error(`Error processing project ${project.name}:`, error);
+        // Continue with other projects
+      }
+    }
+    
+    // Convert to ContributionData array
+    const contributions: ContributionData[] = Array.from(contributionMap.entries())
+      .map(([date, count]) => ({
+        date,
+        count,
+        instanceId: instance.id
+      }));
+    
+    return contributions;
+  } catch (error) {
+    console.error('Error fetching historical contributions:', error);
+    return [];
+  }
+}
+
+// Helper to fetch user's projects
+async function fetchUserProjects(
+  instance: GitLabInstance, 
+  userId: number
+): Promise<any[]> {
+  try {
+    let allProjects: any[] = [];
+    let page = 1;
+    let hasMoreProjects = true;
+    
+    while (hasMoreProjects) {
+      const response = await axios.get(
+        `${instance.baseUrl}/api/v4/users/${userId}/projects`,
+        {
+          headers: {
+            'Private-Token': instance.token
+          },
+          params: {
+            per_page: 100,
+            page: page,
+            membership: true,
+            order_by: 'updated_at',
+            sort: 'desc'
+          }
+        }
+      );
+      
+      const projects = response.data;
+      
+      if (projects.length === 0) {
+        hasMoreProjects = false;
+      } else {
+        allProjects = [...allProjects, ...projects];
+        page++;
+        
+        if (projects.length < 100) {
+          hasMoreProjects = false;
+        }
+        
+        // Limit to 5 pages to avoid rate limiting
+        if (page > 5) {
+          hasMoreProjects = false;
+        }
+      }
+    }
+    
+    return allProjects;
+  } catch (error) {
+    console.error('Error fetching user projects:', error);
+    return [];
+  }
+}
+
+// Helper to fetch commits for a project
+async function fetchProjectCommits(
+  instance: GitLabInstance,
+  projectId: number,
+  username: string,
+  startDate: string,
+  endDate: string
+): Promise<any[]> {
+  try {
+    let allCommits: any[] = [];
+    let page = 1;
+    let hasMoreCommits = true;
+    
+    while (hasMoreCommits) {
+      const response = await axios.get(
+        `${instance.baseUrl}/api/v4/projects/${projectId}/repository/commits`,
+        {
+          headers: {
+            'Private-Token': instance.token
+          },
+          params: {
+            per_page: 100,
+            page: page,
+            since: startDate,
+            until: endDate,
+            author: username
+          }
+        }
+      );
+      
+      const commits = response.data;
+      
+      if (commits.length === 0) {
+        hasMoreCommits = false;
+      } else {
+        allCommits = [...allCommits, ...commits];
+        page++;
+        
+        if (commits.length < 100) {
+          hasMoreCommits = false;
+        }
+        
+        // Limit to 3 pages to avoid rate limiting
+        if (page > 3) {
+          hasMoreCommits = false;
+        }
+      }
+    }
+    
+    return allCommits;
+  } catch (error) {
+    console.error(`Error fetching commits for project ${projectId}:`, error);
+    return [];
+  }
+}
+
+// Repackaged function to fetch contributions via events API
+async function fetchContributionsViaEvents(
+  instance: GitLabInstance,
+  user: UserData,
+  startDate: string,
+  endDate: string
+): Promise<ContributionData[]> {
+  // Parse the dates to determine years involved
+  const startYear = new Date(startDate).getFullYear();
+  const endYear = new Date(endDate).getFullYear();
+  const yearsToFetch = [];
+  
+  // Generate array of years to fetch
+  for (let year = startYear; year <= endYear; year++) {
+    yearsToFetch.push(year);
+  }
+  
+  console.log(`Need to fetch contributions for years: ${yearsToFetch.join(', ')}`);
+  
+  // Collection for all contributions across all applicable years
+  let allContributions: ContributionData[] = [];
+  
+  // Process each year separately for better performance
+  if (yearsToFetch.length > 0) {
+    for (const year of yearsToFetch) {
+      console.log(`Processing year ${year} for ${instance.name} using events API...`);
+      
+      // Calculate the year's date range
+      const yearStart = new Date(year, 0, 1).toISOString().split('T')[0];
+      const yearEnd = new Date(year, 11, 31).toISOString().split('T')[0];
+      
+      // The + 1 day is to ensure we include the last day of the range
+      const nextDay = new Date(new Date(yearEnd).getTime() + 86400000).toISOString().split('T')[0];
+      
+      const yearContributions = await fetchContributionsFromEvents(
+        instance, 
+        user, 
+        yearStart, 
+        nextDay
+      );
+      
+      console.log(`Total for year ${year}: ${yearContributions.length} contribution days`);
+      allContributions = [...allContributions, ...yearContributions];
+    }
+  } else {
+    // Fall back to events API approach for the entire date range
+    allContributions = await fetchContributionsFromEvents(instance, user, startDate, endDate);
+  }
+  
+  // Apply date filtering to ensure we only return contributions within the requested range
+  const startDateObj = new Date(startDate);
+  const endDateObj = new Date(endDate);
+  
+  const filteredContributions = allContributions.filter(contribution => {
+    const contributionDate = new Date(contribution.date);
+    return contributionDate >= startDateObj && contributionDate <= endDateObj;
+  });
+  
+  console.log(`Final: Found ${filteredContributions.length} contribution days for ${instance.name} from ${startDate} to ${endDate}`);
+  console.log(`Total contribution count for ${instance.name}: ${filteredContributions.reduce((sum, c) => sum + c.count, 0)}`);
+  
+  return filteredContributions;
 }
 
 // Fallback method to fetch contributions using the events API
