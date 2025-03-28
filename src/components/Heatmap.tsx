@@ -14,7 +14,7 @@ import { useDateRange } from '../lib/dateContext';
 type ReactCalendarHeatmapValue = {
   date: string | Date;
   count?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 type YearOption = {
@@ -104,7 +104,7 @@ export default function Heatmap() {
   // We're still using the aggregateContributions function, but importing it locally
   // since it doesn't need to change
   const aggregateContributions = (
-    contributionsArray: any[][]
+    contributionsArray: unknown[][]
   ): Map<string, { count: number, contributions: { instanceId: string, count: number }[] }> => {
     const aggregatedMap = new Map<string, { 
       count: number, 

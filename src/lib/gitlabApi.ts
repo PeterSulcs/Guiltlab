@@ -68,7 +68,7 @@ async function fetchCalendarContributions(
     
     console.log(`Calendar endpoint for ${instance.name} (year ${year}) returned ${contributions.length} contribution days`);
     return contributions;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If endpoint doesn't exist (404) or other error, log it and return empty array
     const statusCode = error.response?.status || 'unknown';
     console.error(`Error fetching calendar contributions for ${instance.name} (year ${year}): ${statusCode} - ${error.message}`);
@@ -285,7 +285,7 @@ async function fetchProjectCommits(
     console.log(`Fetching commits for project ${projectId} by user ${username}...`);
     
     // Fetch commits for this project filtered by the specified author (username)
-    let allCommits: any[] = [];
+    let allCommits: unknown[] = [];
     let page = 1;
     let hasMoreCommits = true;
     
@@ -442,7 +442,7 @@ async function fetchContributionsFromEvents(
   const formattedEndDate = endDate;
   
   // Fetch events data from the GitLab API (with pagination)
-  let allEvents: any[] = [];
+  let allEvents: unknown[] = [];
   let page = 1;
   let hasMoreEvents = true;
   let reachedRateLimit = false;
@@ -480,7 +480,7 @@ async function fetchContributionsFromEvents(
         // Log the first few events for debugging
         if (page === 1) {
           console.log(`${instance.name} events for debugging (page ${page}):`, 
-                    events.slice(0, 3).map((e: any) => ({
+                    events.slice(0, 3).map((e: unknown) => ({
                       action: e.action_name,
                       date: e.created_at.split('T')[0],
                       type: e.target_type
@@ -501,7 +501,7 @@ async function fetchContributionsFromEvents(
           hasMoreEvents = false;
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Error fetching events page ${page}:`, error.message);
       
       // Check if we hit rate limiting
@@ -524,7 +524,7 @@ async function fetchContributionsFromEvents(
   const startDateObj = new Date(startDate);
   const endDateObj = new Date(endDate);
   
-  allEvents.forEach((event: any) => {
+  allEvents.forEach((event: unknown) => {
     try {
       // GitLab returns ISO format dates with timezone, extract just the YYYY-MM-DD
       if (!event.created_at) {

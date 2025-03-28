@@ -70,7 +70,7 @@ export default function TeamLeaderboard() {
               );
 
               // Sum contributions for this instance
-              const instanceTotal = contributions.reduce((total: number, item: any) => total + item.count, 0);
+              const instanceTotal = contributions.reduce((total: number, item: unknown) => total + item.count, 0);
               
               // Add to instance breakdown
               contributionsByInstance.push({
@@ -80,7 +80,7 @@ export default function TeamLeaderboard() {
               });
 
               // Aggregate contributions by date
-              contributions.forEach((contribution: any) => {
+              contributions.forEach((contribution: unknown) => {
                 const existingCount = contributionsByDate.get(contribution.date) || 0;
                 contributionsByDate.set(contribution.date, existingCount + contribution.count);
               });
@@ -115,7 +115,7 @@ export default function TeamLeaderboard() {
               );
 
               // Sum contributions for this instance
-              const instanceTotal = contributions.reduce((total: number, item: any) => total + item.count, 0);
+              const instanceTotal = contributions.reduce((total: number, item: unknown) => total + item.count, 0);
               
               // Add to instance breakdown
               contributionsByInstance.push({
@@ -125,7 +125,7 @@ export default function TeamLeaderboard() {
               });
 
               // Aggregate contributions by date
-              contributions.forEach((contribution: any) => {
+              contributions.forEach((contribution: unknown) => {
                 const existingCount = contributionsByDate.get(contribution.date) || 0;
                 contributionsByDate.set(contribution.date, existingCount + contribution.count);
               });

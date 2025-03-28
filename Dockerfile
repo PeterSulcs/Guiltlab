@@ -8,6 +8,16 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
+# Linting and type checking stage
+FROM base AS linting
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Run linting and type checking
+RUN npm run lint || (echo "Linting failed. Please fix the errors before building." && exit 1)
+RUN npx tsc --noEmit || (echo "TypeScript check failed. Please fix the types before building." && exit 1)
+
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app

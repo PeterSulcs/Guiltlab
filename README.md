@@ -130,6 +130,49 @@ To create a new release:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Code Quality and Linting
+
+### Fixing Linting Errors
+
+The project uses ESLint and TypeScript for code quality checks. If you encounter linting errors, you can use the following scripts to fix them:
+
+```bash
+# Run the linter and see all errors
+npm run lint
+
+# Automatically fix linting errors where possible
+npm run lint:fix
+
+# Fix common TypeScript errors (any types, unused vars) across all files
+npm run fix:types
+
+# Fix the specific errors that were found during build
+npm run fix:specific
+```
+
+#### Common Linting Issues
+
+1. **Unused imports/variables**: The linter will flag imports or variables that are defined but never used. Either remove them or prefix with underscore (`_`) to indicate they're intentionally unused.
+
+2. **`any` types**: TypeScript discourages using the `any` type. Replace with more specific types when possible, or use `unknown` if the exact type isn't known.
+
+3. **Image elements**: Consider using Next.js's `Image` component instead of HTML `<img>` tags for better performance.
+
+### TypeScript Configuration
+
+If you need to temporarily disable certain TypeScript checks during development, you can modify the `tsconfig.json` file. The current configuration includes:
+
+```json
+{
+  "compilerOptions": {
+    // Other options...
+    "noImplicitAny": false, // Temporarily disable to allow building with existing any types
+    "noUnusedLocals": false, // Temporarily disable to allow building with unused variables
+    "noUnusedParameters": false // Temporarily disable to allow building with unused parameters
+  }
+}
+```
+
 ## Acknowledgements
 
 - [Next.js](https://nextjs.org/)

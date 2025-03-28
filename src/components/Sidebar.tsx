@@ -8,7 +8,7 @@ import { useTheme } from '../lib/themeContext';
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { theme, setTheme, resolvedTheme } = useTheme(); 
+  const { setTheme, resolvedTheme } = useTheme();
   
   // Load collapsed state from localStorage on mount
   useEffect(() => {

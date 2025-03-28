@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { GitLabInstance, GitHubInstance, RepoInstance } from '../types';
+import { GitLabInstance, GitHubInstance,  } from '../types';
 
 interface RepoContextType {
   gitlabInstances: GitLabInstance[];
