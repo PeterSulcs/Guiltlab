@@ -47,7 +47,8 @@ yarn dev
 
 1. Add your GitLab instances using the form on the left side.
    - You'll need to provide a name for the instance, the base URL (e.g., `https://gitlab.com`), and a personal access token.
-   - The token should have `read_user` and `read_api` scopes.
+   - The token should have `read_user`, `read_api`, and `read_repository` scopes.
+   - **Important:** The `read_repository` scope is critical for accessing historical contribution data (older than 1 year).
 
 2. Add your GitHub instances using the GitHub form.
    - You'll need to provide a name for the instance, your GitHub username, and a personal access token.

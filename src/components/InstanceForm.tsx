@@ -146,7 +146,8 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
             disabled={isSubmitting}
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            Token requires <code>read_user</code> and <code>read_api</code> scopes
+            Token requires <code>read_user</code>, <code>read_api</code>, and <code>read_repository</code> scopes 
+            (especially <code>read_repository</code> for historical data)
           </p>
         </div>
         

@@ -1,9 +1,8 @@
 "use client";
-
 import React, { useState } from 'react';
-import { useRepo } from '../lib/repoContext';
 import { GitLabInstance } from '../types';
 import InstanceForm from './InstanceForm';
+import { useRepo } from '@/lib/repoContext';
 
 export default function InstanceList() {
   const { gitlabInstances, removeGitLabInstance } = useRepo();

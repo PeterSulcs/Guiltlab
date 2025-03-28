@@ -49,8 +49,19 @@ export default function Heatmap() {
       endDate: today
     });
     
-    // Add specific calendar years (going back 5 years)
-    for (let year = currentYear; year >= currentYear - 5; year--) {
+    // Add "All Time" option
+    const tenYearsAgo = new Date();
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10); // Go back 10 years
+    
+    options.push({
+      label: 'All Time (10 years)',
+      value: -1, // Special value for all time
+      startDate: tenYearsAgo,
+      endDate: today
+    });
+    
+    // Add specific calendar years (going back 10 years)
+    for (let year = currentYear; year >= currentYear - 10; year--) {
       const startDate = new Date(year, 0, 1); // January 1st
       const endDate = year === currentYear 
         ? new Date() // Current date for current year
