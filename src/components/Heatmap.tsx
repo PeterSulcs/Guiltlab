@@ -9,6 +9,7 @@ import { fetchContributions } from '../lib/gitlabApi';
 import { fetchGitHubContributions } from '../lib/githubApi';
 import { AggregatedContribution } from '../types';
 import { useTheme } from '../lib/themeContext';
+import { useDateRange } from '../lib/dateContext';
 
 type ReactCalendarHeatmapValue = {
   date: string | Date;
@@ -26,6 +27,7 @@ type YearOption = {
 export default function Heatmap() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
   const { resolvedTheme } = useTheme();
+  const { dateRange, setDateRange } = useDateRange();
   const [aggregatedData, setAggregatedData] = useState<AggregatedContribution[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -66,25 +68,25 @@ export default function Heatmap() {
   };
   
   const yearOptions = generateYearOptions();
-  const [selectedYearOption, setSelectedYearOption] = useState<YearOption>(yearOptions[0]);
   
-  // Calculate date range based on selected year option
-  const startDate = selectedYearOption.startDate;
-  const endDate = selectedYearOption.endDate;
-  
-  // Add one day to endDate to ensure today's contributions are included
-  const tomorrowDate = new Date(endDate);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  
-  const startDateString = startDate.toISOString().split('T')[0];
-  const endDateString = tomorrowDate.toISOString().split('T')[0];
-
   // Function to handle year change
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const yearValue = parseInt(e.target.value);
     const option = yearOptions.find(opt => opt.value === yearValue);
     if (option) {
-      setSelectedYearOption(option);
+      // Add one day to endDate to ensure contributions for the end date are included
+      const tomorrowDate = new Date(option.endDate);
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      
+      // Update the date context
+      setDateRange({
+        startDate: option.startDate,
+        endDate: option.endDate,
+        startDateString: option.startDate.toISOString().split('T')[0],
+        endDateString: tomorrowDate.toISOString().split('T')[0],
+        label: option.label,
+        value: option.value
+      });
     }
   };
 
@@ -131,18 +133,18 @@ export default function Heatmap() {
       
       try {
         console.log("Fetching data with date range:", {
-          startDate: startDateString,
-          endDate: endDateString
+          startDate: dateRange.startDateString,
+          endDate: dateRange.endDateString
         });
         
         // Fetch contributions for each GitLab instance
         const gitlabContributionsPromises = gitlabInstances.map(instance => 
-          fetchContributions(instance, startDateString, endDateString)
+          fetchContributions(instance, dateRange.startDateString, dateRange.endDateString)
         );
         
         // Fetch contributions for each GitHub instance
         const githubContributionsPromises = githubInstances.map(instance => 
-          fetchGitHubContributions(instance, startDateString, endDateString)
+          fetchGitHubContributions(instance, dateRange.startDateString, dateRange.endDateString)
         );
         
         // Wait for all promises to resolve
@@ -171,7 +173,7 @@ export default function Heatmap() {
     };
     
     fetchData();
-  }, [gitlabInstances, githubInstances, loading, startDateString, endDateString]);
+  }, [gitlabInstances, githubInstances, loading, dateRange.startDateString, dateRange.endDateString]);
 
   // Calculate color based on count
   const getColor = (count: number) => {
@@ -199,16 +201,14 @@ export default function Heatmap() {
           {!isLoading && aggregatedData.length > 0 && (
             <p className="text-sm text-muted-foreground">
               {aggregatedData.reduce((total, item) => total + item.count, 0)} contributions in {
-                selectedYearOption.value === 0 
-                  ? 'the last 12 months' 
-                  : selectedYearOption.label
+                dateRange.label
               }
             </p>
           )}
         </div>
         <div className="relative">
           <select
-            value={selectedYearOption.value}
+            value={dateRange.value}
             onChange={handleYearChange}
             className="p-2 pr-8 rounded border border-border bg-input text-sm appearance-none"
             aria-label="Select time period"
@@ -256,8 +256,8 @@ export default function Heatmap() {
           `}</style>
           
           <CalendarHeatmap
-            startDate={startDate}
-            endDate={endDate}
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
             values={aggregatedData}
             classForValue={(value) => {
               if (!value || value.count === 0) {

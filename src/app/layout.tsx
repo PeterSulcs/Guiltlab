@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { RepoProvider } from "../lib/repoContext";
 import { ThemeProvider } from "../lib/themeContext";
+import { DateProvider } from "../lib/dateContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,9 +21,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
-          <RepoProvider>
-            {children}
-          </RepoProvider>
+          <DateProvider>
+            <RepoProvider>
+              {children}
+            </RepoProvider>
+          </DateProvider>
         </ThemeProvider>
       </body>
     </html>
