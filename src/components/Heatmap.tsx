@@ -40,6 +40,11 @@ export default function Heatmap() {
       setError('');
       
       try {
+        console.log("Fetching data with date range:", {
+          startDate: startDateString,
+          endDate: endDateString
+        });
+        
         // Fetch contributions for each instance
         const contributionsPromises = instances.map(instance => 
           fetchContributions(instance, startDateString, endDateString)
@@ -57,6 +62,8 @@ export default function Heatmap() {
           contributions: data.contributions
         }));
         
+        console.log("Aggregated heatmap data:", formattedData);
+        
         setAggregatedData(formattedData);
       } catch (error) {
         console.error('Error fetching contribution data:', error);
@@ -72,9 +79,9 @@ export default function Heatmap() {
   // Calculate color based on count
   const getColor = (count: number) => {
     if (count === 0) return 'color-empty';
-    if (count < 5) return 'color-scale-1';
-    if (count < 10) return 'color-scale-2';
-    if (count < 15) return 'color-scale-3';
+    if (count < 2) return 'color-scale-1';
+    if (count < 4) return 'color-scale-2';
+    if (count < 8) return 'color-scale-3';
     return 'color-scale-4';
   };
 
@@ -103,10 +110,10 @@ export default function Heatmap() {
         <div className="heatmap-container">
           <style jsx>{`
             .color-empty { fill: #ebedf0; }
-            .color-scale-1 { fill: #9be9a8; }
-            .color-scale-2 { fill: #40c463; }
-            .color-scale-3 { fill: #30a14e; }
-            .color-scale-4 { fill: #216e39; }
+            .color-scale-1 { fill: #acd5f2; }
+            .color-scale-2 { fill: #7fa8c9; }
+            .color-scale-3 { fill: #527ba0; }
+            .color-scale-4 { fill: #254e77; }
             
             :global(.react-calendar-heatmap) {
               width: 100%;

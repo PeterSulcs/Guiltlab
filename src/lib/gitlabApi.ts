@@ -33,28 +33,72 @@ export async function fetchContributions(
     // First get the user ID
     const user = await fetchGitLabUser(instance);
     
-    // Fetch events data from the GitLab API
-    const response = await axios.get(
-      `${instance.baseUrl}/api/v4/users/${user.id}/events`,
-      {
-        headers: {
-          'Private-Token': instance.token
-        },
-        params: {
-          after: startDate,
-          before: endDate,
-          per_page: 100
+    // Fetch events data from the GitLab API (with pagination)
+    let allEvents: any[] = [];
+    let page = 1;
+    let hasMoreEvents = true;
+    
+    // GitLab counts specific action types as contributions
+    // See: https://docs.gitlab.com/ee/user/profile/contributions.html
+    const contributionActionTypes = [
+      'pushed', 'merged', 'created', 'commented', 'opened'
+    ];
+    
+    while (hasMoreEvents) {
+      const response = await axios.get(
+        `${instance.baseUrl}/api/v4/users/${user.id}/events`,
+        {
+          headers: {
+            'Private-Token': instance.token
+          },
+          params: {
+            after: startDate,
+            before: endDate,
+            per_page: 100,
+            page: page
+          }
+        }
+      );
+      
+      const events = response.data;
+      
+      if (events.length === 0) {
+        hasMoreEvents = false;
+      } else {
+        // Log the first few events for debugging
+        if (page === 1) {
+          console.log(`${instance.name} events for debugging:`, 
+                     events.slice(0, 3).map((e: any) => ({
+                       action: e.action_name,
+                       date: e.created_at.split('T')[0],
+                       type: e.target_type
+                     })));
+        }
+        
+        allEvents = [...allEvents, ...events];
+        page++;
+        
+        // If we got fewer than the max per page, we're done
+        if (events.length < 100) {
+          hasMoreEvents = false;
         }
       }
-    );
+    }
+    
+    console.log(`Total events fetched from ${instance.name}: ${allEvents.length}`);
     
     // Process events data into a contribution map
+    // Filter events to match GitLab's contribution counting logic
     const contributionMap = new Map<string, number>();
     
-    response.data.forEach((event: any) => {
+    allEvents.forEach((event: any) => {
       // GitLab returns ISO format dates with timezone, extract just the YYYY-MM-DD
       const date = event.created_at.split('T')[0];
-      contributionMap.set(date, (contributionMap.get(date) || 0) + 1);
+      
+      // Only count specific action types as contributions
+      if (contributionActionTypes.includes(event.action_name)) {
+        contributionMap.set(date, (contributionMap.get(date) || 0) + 1);
+      }
     });
     
     // Convert map to array of contribution data
@@ -64,6 +108,8 @@ export async function fetchContributions(
         count,
         instanceId: instance.id
       }));
+    
+    console.log(`Counted contributions for ${instance.name}:`, contributions);
     
     return contributions;
   } catch (error) {
