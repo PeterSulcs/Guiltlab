@@ -70,8 +70,9 @@ async function fetchCalendarContributions(
     return contributions;
   } catch (error: unknown) {
     // If endpoint doesn't exist (404) or other error, log it and return empty array
-    const statusCode = error.response?.status || 'unknown';
-    console.error(`Error fetching calendar contributions for ${instance.name} (year ${year}): ${statusCode} - ${error.message}`);
+    const typedError = error as { response?: { status: number }, message: string };
+    const statusCode = typedError.response?.status || 'unknown';
+    console.error(`Error fetching calendar contributions for ${instance.name} (year ${year}): ${statusCode} - ${typedError.message}`);
     
     if (statusCode === 404) {
       console.log(`Calendar endpoint not supported by this GitLab instance (${instance.name})`);
@@ -341,7 +342,7 @@ async function fetchContributionsViaEvents(
   // Parse the dates to determine years involved
   const startYear = new Date(startDate).getFullYear();
   const endYear = new Date(endDate).getFullYear();
-  const yearsToFetch = [];
+  const yearsToFetch: number[] = [];
   
   // Generate array of years to fetch
   for (let year = startYear; year <= endYear; year++) {
@@ -480,11 +481,14 @@ async function fetchContributionsFromEvents(
         // Log the first few events for debugging
         if (page === 1) {
           console.log(`${instance.name} events for debugging (page ${page}):`, 
-                    events.slice(0, 3).map((e: unknown) => ({
-                      action: e.action_name,
-                      date: e.created_at.split('T')[0],
-                      type: e.target_type
-                    })));
+                    events.slice(0, 3).map((e: unknown) => {
+                      const typedEvent = e as { action_name: string, created_at: string, target_type: string };
+                      return {
+                        action: typedEvent.action_name,
+                        date: typedEvent.created_at.split('T')[0],
+                        type: typedEvent.target_type
+                      };
+                    }));
         }
         
         allEvents = [...allEvents, ...events];
@@ -502,10 +506,11 @@ async function fetchContributionsFromEvents(
         }
       }
     } catch (error: unknown) {
-      console.error(`Error fetching events page ${page}:`, error.message);
+      console.error(`Error fetching events page ${page}:`, (error as { message: string }).message);
       
       // Check if we hit rate limiting
-      if (error.response && error.response.status === 429) {
+      const typedError = error as { response?: { status: number } };
+      if (typedError.response && typedError.response.status === 429) {
         console.log(`Hit rate limit on page ${page}, stopping pagination`);
         reachedRateLimit = true;
       }
@@ -527,18 +532,19 @@ async function fetchContributionsFromEvents(
   allEvents.forEach((event: unknown) => {
     try {
       // GitLab returns ISO format dates with timezone, extract just the YYYY-MM-DD
-      if (!event.created_at) {
+      const typedEvent = event as { created_at?: string, action_name?: string };
+      if (!typedEvent.created_at) {
         console.log("Event missing created_at:", event);
         return; // Skip events without dates
       }
       
-      const date = event.created_at.split('T')[0];
+      const date = typedEvent.created_at.split('T')[0];
       
       // Double-check the date range (GitLab API sometimes ignores the date filters)
       const eventDate = new Date(date);
       if (eventDate >= startDateObj && eventDate <= endDateObj) {
         // Only count specific action types as contributions
-        if (contributionActionTypes.includes(event.action_name)) {
+        if (contributionActionTypes.includes(typedEvent.action_name || '')) {
           contributionMap.set(date, (contributionMap.get(date) || 0) + 1);
         }
       }

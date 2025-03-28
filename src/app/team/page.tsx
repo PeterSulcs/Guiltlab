@@ -10,7 +10,14 @@ export default function TeamPage() {
   // Generate year options (current year and previous years)
   const currentYear = new Date().getFullYear();
   const generateYearOptions = () => {
-    const options = [];
+    type YearOption = {
+      label: string;
+      value: number;
+      startDate: Date;
+      endDate: Date;
+    };
+    
+    const options: YearOption[] = [];
     
     // Add last 365 days option
     const today = new Date();

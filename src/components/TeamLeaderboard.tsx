@@ -61,6 +61,13 @@ export default function TeamLeaderboard() {
                 continue;
               }
 
+              // Define a type for contribution data
+              type Contribution = {
+                date: string;
+                count: number;
+                instanceId: string;
+              };
+
               // Fetch contributions using the member's GitLab username for this instance
               const contributions = await fetchContributions(
                 instance,
@@ -70,7 +77,10 @@ export default function TeamLeaderboard() {
               );
 
               // Sum contributions for this instance
-              const instanceTotal = contributions.reduce((total: number, item: unknown) => total + item.count, 0);
+              const instanceTotal = contributions.reduce((total: number, item: unknown) => {
+                const typedItem = item as Contribution;
+                return total + typedItem.count;
+              }, 0);
               
               // Add to instance breakdown
               contributionsByInstance.push({
@@ -81,8 +91,9 @@ export default function TeamLeaderboard() {
 
               // Aggregate contributions by date
               contributions.forEach((contribution: unknown) => {
-                const existingCount = contributionsByDate.get(contribution.date) || 0;
-                contributionsByDate.set(contribution.date, existingCount + contribution.count);
+                const typedContribution = contribution as Contribution;
+                const existingCount = contributionsByDate.get(typedContribution.date) || 0;
+                contributionsByDate.set(typedContribution.date, existingCount + typedContribution.count);
               });
 
               totalContributions += instanceTotal;
@@ -106,6 +117,13 @@ export default function TeamLeaderboard() {
                 continue;
               }
 
+              // Define a type for contribution data
+              type Contribution = {
+                date: string;
+                count: number;
+                instanceId: string;
+              };
+
               // Fetch contributions using the member's GitHub username for this instance
               const contributions = await fetchGitHubContributions(
                 instance,
@@ -115,7 +133,10 @@ export default function TeamLeaderboard() {
               );
 
               // Sum contributions for this instance
-              const instanceTotal = contributions.reduce((total: number, item: unknown) => total + item.count, 0);
+              const instanceTotal = contributions.reduce((total: number, item: unknown) => {
+                const typedItem = item as Contribution;
+                return total + typedItem.count;
+              }, 0);
               
               // Add to instance breakdown
               contributionsByInstance.push({
@@ -126,8 +147,9 @@ export default function TeamLeaderboard() {
 
               // Aggregate contributions by date
               contributions.forEach((contribution: unknown) => {
-                const existingCount = contributionsByDate.get(contribution.date) || 0;
-                contributionsByDate.set(contribution.date, existingCount + contribution.count);
+                const typedContribution = contribution as Contribution;
+                const existingCount = contributionsByDate.get(typedContribution.date) || 0;
+                contributionsByDate.set(typedContribution.date, existingCount + typedContribution.count);
               });
 
               totalContributions += instanceTotal;
