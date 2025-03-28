@@ -80,6 +80,52 @@ npm start
 yarn start
 ```
 
+## Deployment
+
+### Docker Deployment
+
+This application can be built and run as a Docker container:
+
+```bash
+# Build the Docker image
+docker build -t guiltlab:latest .
+
+# Run the container
+docker run -p 3000:3000 guiltlab:latest
+```
+
+### Kubernetes Deployment
+
+The application includes Kubernetes manifests in the `k8s/` directory for manual deployment to a Kubernetes cluster:
+
+```bash
+# Apply the Kubernetes manifests
+kubectl apply -f k8s/deployment.yaml
+```
+
+Remember to update the `guiltlab.example.com` hostname in the Ingress resource to your actual domain and to replace the image reference in the deployment.yaml file with your actual image:
+
+```
+# Update the image in deployment.yaml before applying
+sed -i 's|ghcr.io/USERNAME/guiltlab:VERSION|ghcr.io/yourusername/guiltlab:latest|g' k8s/deployment.yaml
+```
+
+### Continuous Integration
+
+The project is configured with GitHub Actions workflows for:
+
+1. **Building and Publishing Docker Images**: When pushing to the main branch or tagging a release (with `v*` pattern), a Docker image is automatically built and published to GitHub Container Registry.
+
+2. **Release Management**: The project uses semantic-release for versioning and creating GitHub releases.
+
+#### Creating Releases
+
+To create a new release:
+
+1. **Automatic Release**: Make commits with conventional commit messages (e.g., `feat: add new feature`, `fix: resolve bug`). The semantic-release action will automatically determine the version bump based on your commits.
+
+2. **Manual Release**: Use the "Create Release" workflow through the GitHub Actions UI, selecting the version bump type (patch, minor, major).
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
