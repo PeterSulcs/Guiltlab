@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/PeterSulcs/Guiltlab/compare/v1.0.0...v1.0.1) (2025-03-28)
+
+
+### Bug Fixes
+
+* clean up ([f746212](https://github.com/PeterSulcs/Guiltlab/commit/f74621260d8177d79d5f506931ac8a647cf80729))
+* trigger a fresh run ([44cf8cb](https://github.com/PeterSulcs/Guiltlab/commit/44cf8cbb63958bd9d5b864c98fa2c665acbbf51a))
+
 # 1.0.0 (2025-03-28)
 
 
