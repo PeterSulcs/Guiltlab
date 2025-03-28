@@ -126,13 +126,14 @@ async function fetchActivityContributions(
 export async function fetchContributions(
   instance: GitLabInstance, 
   startDate: string, 
-  endDate: string
+  endDate: string,
+  overrideUsername?: string
 ): Promise<ContributionData[]> {
   try {
     // First get the user ID
     const user = await fetchGitLabUser(instance);
     
-    console.log(`Fetching GitLab contributions for ${instance.name} (${user.username}) from ${startDate} to ${endDate}`);
+    console.log(`Fetching GitLab contributions for ${instance.name} (${overrideUsername || user.username}) from ${startDate} to ${endDate}`);
     
     // For older years, we need to try a different approach since the events API has limitations
     const startYear = new Date(startDate).getFullYear();
@@ -142,7 +143,13 @@ export async function fetchContributions(
     // If date range is not current or last year, try the projects approach for historical data
     if (startYear < lastYear) {
       console.log(`Fetching historical data (${startYear}) using projects approach...`);
-      const historicalContributions = await fetchHistoricalContributions(instance, user, startDate, endDate);
+      const historicalContributions = await fetchHistoricalContributions(
+        instance, 
+        user, 
+        startDate, 
+        endDate,
+        overrideUsername
+      );
       
       if (historicalContributions.length > 0) {
         console.log(`Successfully retrieved ${historicalContributions.length} historical contribution days`);
@@ -153,7 +160,7 @@ export async function fetchContributions(
     }
     
     // Fall back to events API for more recent data or if historical approach failed
-    return await fetchContributionsViaEvents(instance, user, startDate, endDate);
+    return await fetchContributionsViaEvents(instance, user, startDate, endDate, overrideUsername);
   } catch (error) {
     console.error(`Error fetching contributions from ${instance.name}:`, error);
     console.error('Error details:', error);
@@ -169,14 +176,15 @@ async function fetchHistoricalContributions(
   instance: GitLabInstance,
   user: UserData,
   startDate: string,
-  endDate: string
+  endDate: string,
+  overrideUsername?: string
 ): Promise<ContributionData[]> {
   try {
     // First get all projects the user is a member of
-    console.log(`Fetching projects for ${user.username}...`);
+    console.log(`Fetching projects for ${overrideUsername || user.username}...`);
     
     const projects = await fetchUserProjects(instance, user.id);
-    console.log(`Found ${projects.length} projects for ${user.username}`);
+    console.log(`Found ${projects.length} projects for ${overrideUsername || user.username}`);
     
     if (projects.length === 0) {
       return [];
@@ -199,7 +207,7 @@ async function fetchHistoricalContributions(
         const commits = await fetchProjectCommits(
           instance, 
           project.id, 
-          user.username,
+          overrideUsername || user.username,
           startDate,
           endDate
         );
@@ -240,53 +248,25 @@ async function fetchHistoricalContributions(
   }
 }
 
-// Helper to fetch user's projects
+// Function to fetch all projects a user belongs to
 async function fetchUserProjects(
   instance: GitLabInstance, 
-  userId: number
+  userId: string | number
 ): Promise<any[]> {
   try {
-    let allProjects: any[] = [];
-    let page = 1;
-    let hasMoreProjects = true;
-    
-    while (hasMoreProjects) {
-      const response = await axios.get(
-        `${instance.baseUrl}/api/v4/users/${userId}/projects`,
-        {
-          headers: {
-            'Private-Token': instance.token
-          },
-          params: {
-            per_page: 100,
-            page: page,
-            membership: true,
-            order_by: 'updated_at',
-            sort: 'desc'
-          }
-        }
-      );
-      
-      const projects = response.data;
-      
-      if (projects.length === 0) {
-        hasMoreProjects = false;
-      } else {
-        allProjects = [...allProjects, ...projects];
-        page++;
-        
-        if (projects.length < 100) {
-          hasMoreProjects = false;
-        }
-        
-        // Limit to 5 pages to avoid rate limiting
-        if (page > 5) {
-          hasMoreProjects = false;
+    const response = await axios.get(
+      `${instance.baseUrl}/api/v4/users/${userId}/projects`,
+      {
+        headers: {
+          'Private-Token': instance.token
+        },
+        params: {
+          per_page: 100 // Maximum allowed by GitLab API
         }
       }
-    }
+    );
     
-    return allProjects;
+    return response.data;
   } catch (error) {
     console.error('Error fetching user projects:', error);
     return [];
@@ -354,7 +334,8 @@ async function fetchContributionsViaEvents(
   instance: GitLabInstance,
   user: UserData,
   startDate: string,
-  endDate: string
+  endDate: string,
+  overrideUsername?: string
 ): Promise<ContributionData[]> {
   // Parse the dates to determine years involved
   const startYear = new Date(startDate).getFullYear();
@@ -387,7 +368,8 @@ async function fetchContributionsViaEvents(
         instance, 
         user, 
         yearStart, 
-        nextDay
+        nextDay,
+        overrideUsername
       );
       
       console.log(`Total for year ${year}: ${yearContributions.length} contribution days`);
@@ -395,7 +377,7 @@ async function fetchContributionsViaEvents(
     }
   } else {
     // Fall back to events API approach for the entire date range
-    allContributions = await fetchContributionsFromEvents(instance, user, startDate, endDate);
+    allContributions = await fetchContributionsFromEvents(instance, user, startDate, endDate, overrideUsername);
   }
   
   // Apply date filtering to ensure we only return contributions within the requested range
@@ -418,7 +400,8 @@ async function fetchContributionsFromEvents(
   instance: GitLabInstance,
   user: UserData,
   startDate: string,
-  endDate: string
+  endDate: string,
+  overrideUsername?: string
 ): Promise<ContributionData[]> {
   console.log(`Falling back to events API for ${instance.name} from ${startDate} to ${endDate}`);
   

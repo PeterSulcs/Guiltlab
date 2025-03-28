@@ -37,11 +37,12 @@ export interface AggregatedContribution {
 }
 
 export interface UserData {
-  id: number;
+  id: number | string;
   username: string;
   name: string;
   avatarUrl: string;
   email: string;
+  isTeamMember?: boolean;
 }
 
 export interface LeaderboardEntry {
@@ -50,5 +51,28 @@ export interface LeaderboardEntry {
   instances: {
     instanceId: string;
     contributions: number;
+  }[];
+}
+
+export interface TeamMember {
+  id: string;
+  username: string;
+  name: string;
+  avatarUrl?: string;
+  gitlabUsername: string;
+  addedAt: string;
+}
+
+export interface TeamLeaderboardEntry {
+  member: TeamMember;
+  totalContributions: number;
+  contributionsByInstance: {
+    instanceId: string;
+    instanceName: string;
+    contributions: number;
+  }[];
+  contributionsByDate: {
+    date: string;
+    count: number;
   }[];
 } 

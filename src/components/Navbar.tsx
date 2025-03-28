@@ -33,6 +33,16 @@ export default function Navbar() {
               Dashboard
             </Link>
             <Link 
+              href="/team" 
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                pathname === '/team' 
+                  ? 'bg-primary-foreground/20 text-primary-foreground' 
+                  : 'text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10'
+              }`}
+            >
+              Team
+            </Link>
+            <Link 
               href="/settings" 
               className={`px-3 py-2 rounded-md text-sm font-medium ${
                 pathname === '/settings' 
