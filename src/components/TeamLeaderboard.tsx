@@ -10,7 +10,6 @@ import { TeamLeaderboardEntry } from '../types';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip } from 'react-tooltip';
-import { useTheme } from '../lib/themeContext';
 
 export default function TeamLeaderboard() {
   const { teamMembers, loading: teamLoading } = useTeam();

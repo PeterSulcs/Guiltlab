@@ -5,7 +5,7 @@ import { useRepo } from '../lib/repoContext';
 import { useDateRange } from '../lib/dateContext';
 import { fetchContributions, fetchGitLabUser } from '../lib/gitlabApi';
 import { fetchGitHubContributions, fetchGitHubUser } from '../lib/githubApi';
-import {    LeaderboardEntry, UserData } from '../types';
+import { UserData } from '../types';
 
 export default function Leaderboard() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
@@ -120,10 +120,10 @@ export default function Leaderboard() {
         setInstanceContributions(contributionsPerInstance);
         
         // Convert map to array and sort by total contributions
-        const leaderboard = Array.from(usersMap.values())
+        Array.from(usersMap.values())
           .sort((a, b) => b.totalContributions - a.totalContributions);
         
-        // No need to set leaderboardData here, as it's not used in the component
+        // No need to set or use leaderboard variable
       } catch (error) {
         console.error('Error fetching leaderboard data:', error);
         setError('Failed to fetch leaderboard data. Please try again.');

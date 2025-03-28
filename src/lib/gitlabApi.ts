@@ -153,7 +153,7 @@ async function fetchHistoricalContributions(
 async function fetchUserProjects(
   instance: GitLabInstance, 
   userId: string | number
-): Promise<any[]> {
+): Promise<unknown[]> {
   try {
     const response = await axios.get(
       `${instance.baseUrl}/api/v4/users/${userId}/projects`,
@@ -181,7 +181,7 @@ async function fetchProjectCommits(
   username: string,
   startDate: string,
   endDate: string
-): Promise<any[]> {
+): Promise<unknown[]> {
   try {
     console.log(`Fetching commits for project ${projectId} by user ${username}...`);
     

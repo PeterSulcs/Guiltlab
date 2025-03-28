@@ -5,6 +5,7 @@ import { useTeam } from '../lib/teamContext';
 import { useRepo } from '../lib/repoContext';
 import { FiTrash2, FiUser, FiEdit2 } from 'react-icons/fi';
 import { TeamMember } from '../types';
+import Image from 'next/image';
 
 export default function TeamMemberList() {
   const { teamMembers, removeTeamMember, updateTeamMember, loading } = useTeam();
@@ -241,10 +242,12 @@ export default function TeamMemberList() {
             <div key={member.id} className="flex items-center justify-between p-3 border border-border rounded-md bg-background">
               <div className="flex items-center space-x-3">
                 {member.avatarUrl ? (
-                  <img 
+                  <Image 
                     src={member.avatarUrl} 
                     alt={member.displayName} 
                     className="w-8 h-8 rounded-full"
+                    width={32}
+                    height={32}
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
