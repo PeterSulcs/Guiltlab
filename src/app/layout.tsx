@@ -5,7 +5,8 @@ import { RepoProvider } from "../lib/repoContext";
 import { ThemeProvider } from "../lib/themeContext";
 import { DateProvider } from "../lib/dateContext";
 import { TeamProvider } from "../lib/teamContext";
-import Navbar from "@/components/Navbar";
+import Sidebar from "../components/Sidebar";
+import HideNextjsBadge from "../components/HideNextjsBadge";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,19 +27,22 @@ export default function RootLayout({
           <DateProvider>
             <RepoProvider>
               <TeamProvider>
-                <div className="min-h-screen bg-background flex flex-col">
-                  <Navbar />
-                  <main className="flex-grow">
-                    {children}
-                  </main>
-                  <footer className="bg-muted text-muted-foreground p-6">
-                    <div className="container mx-auto text-center">
-                      <p>&copy; {new Date().getFullYear()} GuiltLab - GitLab & GitHub Heatmap Aggregator</p>
-                      <p className="opacity-70 text-sm mt-1">
-                        Not affiliated with GitLab Inc. or GitHub Inc.
-                      </p>
-                    </div>
-                  </footer>
+                <div className="min-h-screen bg-background flex">
+                  <Sidebar />
+                  <div className="flex-1 flex flex-col">
+                    <main className="flex-grow">
+                      {children}
+                    </main>
+                    <footer className="bg-muted text-muted-foreground p-4">
+                      <div className="container mx-auto text-center">
+                        <p>&copy; {new Date().getFullYear()} GuiltLab - GitLab & GitHub Heatmap Aggregator</p>
+                        <p className="opacity-70 text-sm mt-1">
+                          Not affiliated with GitLab Inc. or GitHub Inc.
+                        </p>
+                      </div>
+                    </footer>
+                    <HideNextjsBadge />
+                  </div>
                 </div>
               </TeamProvider>
             </RepoProvider>

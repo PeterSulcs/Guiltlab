@@ -17,18 +17,18 @@
   --input: #f6f8fa;
   --ring: #0969da;
   
-  /* Heatmap colors - light mode (10 levels) with higher contrast */
+  /* Heatmap colors - purple theme with #833177 as darkest color */
   --color-empty: #ebedf0;
-  --color-scale-1: #d0e094;
-  --color-scale-2: #b3d174;
-  --color-scale-3: #95c159;
-  --color-scale-4: #78b141;
-  --color-scale-5: #5ba12d;
-  --color-scale-6: #419119;
-  --color-scale-7: #2f7711;
-  --color-scale-8: #225d0e;
-  --color-scale-9: #16450a;
-  --color-scale-10: #0c2d07;
+  --color-scale-1: #f1d4ee;
+  --color-scale-2: #e8b6e5;
+  --color-scale-3: #d296d9;
+  --color-scale-4: #c27acd;
+  --color-scale-5: #b15dc1;
+  --color-scale-6: #a147b1;
+  --color-scale-7: #9541a0;
+  --color-scale-8: #8b3991;
+  --color-scale-9: #873384;
+  --color-scale-10: #833177;
 }
 
 .dark {
@@ -48,18 +48,18 @@
   --input: #010409;
   --ring: #58a6ff;
   
-  /* Heatmap colors - dark mode (10 levels) with higher contrast */
+  /* Heatmap colors - dark purple theme with #833177 as brightest color */
   --color-empty: #161b22;
-  --color-scale-1: #0e4429;
-  --color-scale-2: #006d32;
-  --color-scale-3: #26a641;
-  --color-scale-4: #39d353;
-  --color-scale-5: #4ae564;
-  --color-scale-6: #73eb86;
-  --color-scale-7: #8eed9a;
-  --color-scale-8: #a7f3ae;
-  --color-scale-9: #c6f8ca;
-  --color-scale-10: #dffce0;
+  --color-scale-1: #2d142a;
+  --color-scale-2: #3a1a36;
+  --color-scale-3: #47204a;
+  --color-scale-4: #54265b;
+  --color-scale-5: #612c6a;
+  --color-scale-6: #6e3378;
+  --color-scale-7: #733a80;
+  --color-scale-8: #794389;
+  --color-scale-9: #7c3a91;
+  --color-scale-10: #833177;
 }
 
 /* Add explicit global styles to ensure react-calendar-heatmap picks up colors */

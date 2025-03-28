@@ -3,8 +3,8 @@ import Leaderboard from "@/components/Leaderboard";
 
 export default function Home() {
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="space-y-8">
+    <div className="py-6 px-4 w-full overflow-hidden">
+      <div className="space-y-6">
         <Heatmap />
         <Leaderboard />
       </div>

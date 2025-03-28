@@ -198,147 +198,115 @@ export default function TeamLeaderboard() {
 
   return (
     <div className="space-y-6">
-      {/* Leaderboard Table */}
-      <div className="bg-card-background rounded-lg shadow border border-border p-6">
-        <h2 className="text-xl font-semibold mb-4">Contributions by Team Member</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Contributions for {dateRange.label}
-        </p>
-
-        {isLoading ? (
+      {isLoading ? (
+        <div className="bg-card-background rounded-lg shadow border border-border p-6">
           <p className="text-muted-foreground">Loading team contributions...</p>
-        ) : error ? (
+        </div>
+      ) : error ? (
+        <div className="bg-card-background rounded-lg shadow border border-border p-6">
           <div className="bg-destructive/10 text-destructive p-3 rounded-md">
             {error}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Team Member</th>
-                  <th className="px-4 py-2 text-right font-medium">Contributions</th>
-                  <th className="px-4 py-2 text-left font-medium">GitLab Instances</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboardData.map((entry, index) => (
-                  <tr 
-                    key={entry.member.id}
-                    className="border-b border-border hover:bg-background/50"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center">
-                        <span className="mr-2 text-muted-foreground">{index + 1}.</span>
-                        <span className="font-medium">{entry.member.displayName}</span>
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          @{entry.member.username}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {entry.totalContributions}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1 max-w-md">
-                        {entry.contributionsByInstance.map((instance) => (
-                          <div 
-                            key={instance.instanceId}
-                            className="text-xs bg-background px-2 py-1 rounded"
-                            title={`${instance.instanceName}: ${instance.contributions} contributions`}
-                          >
-                            {instance.instanceName}: {instance.contributions}
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        // Individual Member Heatmaps - sorted by total contributions
+        leaderboardData.map((entry, index) => (
+          <div key={entry.member.id} className="bg-card-background rounded-lg shadow border border-border p-6">
+            <div className="flex flex-wrap items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center">
+                  <span className="mr-2 text-muted-foreground text-lg font-semibold">{index + 1}.</span>
+                  <h2 className="text-xl font-semibold">
+                    {entry.member.displayName}
+                  </h2>
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    @{entry.member.username}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {entry.contributionsByInstance.map((instance) => (
+                    <div 
+                      key={instance.instanceId}
+                      className="text-xs bg-background px-2 py-1 rounded"
+                    >
+                      {instance.instanceName}: {instance.contributions}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm font-medium mt-2 md:mt-0">
+                <span className="font-bold text-lg">{entry.totalContributions}</span> contributions in {dateRange.label}
+              </p>
+            </div>
 
-      {/* Individual Member Heatmaps */}
-      {!isLoading && !error && leaderboardData.map((entry) => (
-        <div key={entry.member.id} className="bg-card-background rounded-lg shadow border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">
-              {entry.member.displayName}'s Contributions
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {entry.totalContributions} contributions in {dateRange.label}
-            </p>
-          </div>
-
-          <div className="heatmap-container">
-            <style jsx>{`
-              .color-empty { fill: var(--color-empty) !important; }
-              .color-scale-1 { fill: var(--color-scale-1) !important; }
-              .color-scale-2 { fill: var(--color-scale-2) !important; }
-              .color-scale-3 { fill: var(--color-scale-3) !important; }
-              .color-scale-4 { fill: var(--color-scale-4) !important; }
-              .color-scale-5 { fill: var(--color-scale-5) !important; }
-              .color-scale-6 { fill: var(--color-scale-6) !important; }
-              .color-scale-7 { fill: var(--color-scale-7) !important; }
-              .color-scale-8 { fill: var(--color-scale-8) !important; }
-              .color-scale-9 { fill: var(--color-scale-9) !important; }
-              .color-scale-10 { fill: var(--color-scale-10) !important; }
-              
-              /* Override react-calendar-heatmap styles for dark mode */
-              :global(.react-calendar-heatmap) {
-                width: 100%;
-              }
-              
-              :global(.react-calendar-heatmap text) {
-                fill: var(--foreground);
-                font-size: 10px;
-              }
-            `}</style>
-
-            <CalendarHeatmap
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              values={entry.contributionsByDate.map(item => ({
-                date: item.date,
-                count: item.count
-              }))}
-              classForValue={(value) => {
-                if (!value || value.count === 0) {
-                  return 'color-empty';
-                }
-                return getColorClass(value.count);
-              }}
-              tooltipDataAttrs={(value) => {
-                if (!value || !value.date) {
-                  return { 'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}` } as any;
-                }
-
-                const date = new Date(value.date);
-                const formattedDate = date.toLocaleDateString();
+            <div className="heatmap-container">
+              <style jsx>{`
+                .color-empty { fill: var(--color-empty) !important; }
+                .color-scale-1 { fill: var(--color-scale-1) !important; }
+                .color-scale-2 { fill: var(--color-scale-2) !important; }
+                .color-scale-3 { fill: var(--color-scale-3) !important; }
+                .color-scale-4 { fill: var(--color-scale-4) !important; }
+                .color-scale-5 { fill: var(--color-scale-5) !important; }
+                .color-scale-6 { fill: var(--color-scale-6) !important; }
+                .color-scale-7 { fill: var(--color-scale-7) !important; }
+                .color-scale-8 { fill: var(--color-scale-8) !important; }
+                .color-scale-9 { fill: var(--color-scale-9) !important; }
+                .color-scale-10 { fill: var(--color-scale-10) !important; }
                 
-                return {
-                  'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}`,
-                  'data-tooltip-content': `${formattedDate}: ${value.count} contributions`,
-                } as any;
-              }}
-            />
-            
-            <Tooltip id={`team-heatmap-tooltip-${entry.member.id}`} />
-            
-            <div className="flex justify-end items-center mt-2 text-xs">
-              <span className="mr-1">Less</span>
-              <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-empty)' }}></div>
-              <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-1)' }}></div>
-              <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-3)' }}></div>
-              <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-6)' }}></div>
-              <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-10)' }}></div>
-              <span>More</span>
+                /* Override react-calendar-heatmap styles for dark mode */
+                :global(.react-calendar-heatmap) {
+                  width: 100%;
+                }
+                
+                :global(.react-calendar-heatmap text) {
+                  fill: var(--foreground);
+                  font-size: 10px;
+                }
+              `}</style>
+
+              <CalendarHeatmap
+                startDate={dateRange.startDate}
+                endDate={dateRange.endDate}
+                values={entry.contributionsByDate.map(item => ({
+                  date: item.date,
+                  count: item.count
+                }))}
+                classForValue={(value) => {
+                  if (!value || value.count === 0) {
+                    return 'color-empty';
+                  }
+                  return getColorClass(value.count);
+                }}
+                tooltipDataAttrs={(value) => {
+                  if (!value || !value.date) {
+                    return { 'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}` } as any;
+                  }
+
+                  const date = new Date(value.date);
+                  const formattedDate = date.toLocaleDateString();
+                  
+                  return {
+                    'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}`,
+                    'data-tooltip-content': `${formattedDate}: ${value.count} contributions`,
+                  } as any;
+                }}
+              />
+              
+              <Tooltip id={`team-heatmap-tooltip-${entry.member.id}`} />
+              
+              <div className="flex justify-end items-center mt-2 text-xs">
+                <span className="mr-1">Less</span>
+                <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-empty)' }}></div>
+                <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-1)' }}></div>
+                <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-3)' }}></div>
+                <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-6)' }}></div>
+                <div style={{ width: '12px', height: '12px', borderRadius: '2px', marginRight: '4px', backgroundColor: 'var(--color-scale-10)' }}></div>
+                <span>More</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 } 

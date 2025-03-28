@@ -12,10 +12,10 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'gitlab' | 'github' | 'team'>('gitlab');
   
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="py-6 px-4 w-full overflow-hidden">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-1">
           Manage your GitLab and GitHub instances, and team members
         </p>
       </div>

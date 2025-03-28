@@ -77,8 +77,8 @@ export default function TeamPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-end mb-8">
+    <div className="py-6 px-4 w-full overflow-hidden">
+      <div className="flex justify-end mb-6">
         <div className="relative">
           <select
             value={dateRange.value}
