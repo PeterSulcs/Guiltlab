@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip } from 'react-tooltip';
@@ -175,12 +175,50 @@ export default function Heatmap() {
     fetchData();
   }, [gitlabInstances, githubInstances, loading, dateRange.startDateString, dateRange.endDateString]);
 
-  // Calculate color based on count
+  // Find the maximum contribution count in the current data
+  const { maxContributionCount, quartiles } = useMemo(() => {
+    if (aggregatedData.length === 0) return { maxContributionCount: 0, quartiles: [0, 0, 0] };
+    
+    // Get non-zero counts and sort them
+    const nonZeroCounts = aggregatedData
+      .filter(item => item.count > 0)
+      .map(item => item.count)
+      .sort((a, b) => a - b);
+    
+    if (nonZeroCounts.length === 0) {
+      return { maxContributionCount: 0, quartiles: [0, 0, 0] };
+    }
+    
+    // Calculate quartiles for better distribution
+    const q1Index = Math.floor(nonZeroCounts.length * 0.25);
+    const q2Index = Math.floor(nonZeroCounts.length * 0.5);
+    const q3Index = Math.floor(nonZeroCounts.length * 0.75);
+    
+    return {
+      maxContributionCount: nonZeroCounts[nonZeroCounts.length - 1],
+      quartiles: [
+        nonZeroCounts[q1Index] || 1,
+        nonZeroCounts[q2Index] || 2,
+        nonZeroCounts[q3Index] || 3
+      ]
+    };
+  }, [aggregatedData]);
+  
+  // Log quartile values for debugging
+  useEffect(() => {
+    if (aggregatedData.length > 0) {
+      console.log(`Contribution stats - Max: ${maxContributionCount}, Quartiles: ${quartiles.join(', ')}`);
+    }
+  }, [maxContributionCount, quartiles, aggregatedData]);
+
+  // Calculate color based on count using quartiles for better distribution
   const getColor = (count: number) => {
     if (count === 0) return 'color-empty';
-    if (count < 2) return 'color-scale-1';
-    if (count < 4) return 'color-scale-2';
-    if (count < 8) return 'color-scale-3';
+    
+    // Use quartile-based distribution for more variation
+    if (count <= quartiles[0]) return 'color-scale-1';
+    if (count <= quartiles[1]) return 'color-scale-2';
+    if (count <= quartiles[2]) return 'color-scale-3';
     return 'color-scale-4';
   };
 
@@ -202,7 +240,7 @@ export default function Heatmap() {
             <p className="text-sm text-muted-foreground">
               {aggregatedData.reduce((total, item) => total + item.count, 0)} contributions in {
                 dateRange.label
-              }
+              } (max: {maxContributionCount} per day)
             </p>
           )}
         </div>
