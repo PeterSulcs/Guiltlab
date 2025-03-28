@@ -16,6 +16,13 @@ type ReactCalendarHeatmapValue = {
   [key: string]: any;
 };
 
+type YearOption = {
+  label: string;
+  value: number;
+  startDate: Date;
+  endDate: Date;
+};
+
 export default function Heatmap() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
   const { resolvedTheme } = useTheme();
@@ -23,10 +30,47 @@ export default function Heatmap() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Calculate date range (past year)
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setFullYear(startDate.getFullYear() - 1);
+  // Generate year options (current year and previous years)
+  const currentYear = new Date().getFullYear();
+  const generateYearOptions = (): YearOption[] => {
+    const options: YearOption[] = [];
+    
+    // Add last 365 days option
+    const today = new Date();
+    const lastYear = new Date();
+    lastYear.setFullYear(lastYear.getFullYear() - 1);
+    
+    options.push({
+      label: 'Last 12 months',
+      value: 0, // Special value for last 12 months
+      startDate: lastYear,
+      endDate: today
+    });
+    
+    // Add specific calendar years (going back 5 years)
+    for (let year = currentYear; year >= currentYear - 5; year--) {
+      const startDate = new Date(year, 0, 1); // January 1st
+      const endDate = year === currentYear 
+        ? new Date() // Current date for current year
+        : new Date(year, 11, 31); // December 31st for past years
+      
+      options.push({
+        label: `${year}`,
+        value: year,
+        startDate,
+        endDate
+      });
+    }
+    
+    return options;
+  };
+  
+  const yearOptions = generateYearOptions();
+  const [selectedYearOption, setSelectedYearOption] = useState<YearOption>(yearOptions[0]);
+  
+  // Calculate date range based on selected year option
+  const startDate = selectedYearOption.startDate;
+  const endDate = selectedYearOption.endDate;
   
   // Add one day to endDate to ensure today's contributions are included
   const tomorrowDate = new Date(endDate);
@@ -34,6 +78,15 @@ export default function Heatmap() {
   
   const startDateString = startDate.toISOString().split('T')[0];
   const endDateString = tomorrowDate.toISOString().split('T')[0];
+
+  // Function to handle year change
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const yearValue = parseInt(e.target.value);
+    const option = yearOptions.find(opt => opt.value === yearValue);
+    if (option) {
+      setSelectedYearOption(option);
+    }
+  };
 
   // We're still using the aggregateContributions function, but importing it locally
   // since it doesn't need to change
@@ -140,7 +193,39 @@ export default function Heatmap() {
 
   return (
     <div className="p-4 bg-card-background rounded-lg shadow border border-border">
-      <h2 className="text-xl font-semibold mb-4">Contribution Heatmap</h2>
+      <div className="flex flex-wrap items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-semibold">Contribution Heatmap</h2>
+          {!isLoading && aggregatedData.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {aggregatedData.reduce((total, item) => total + item.count, 0)} contributions in {
+                selectedYearOption.value === 0 
+                  ? 'the last 12 months' 
+                  : selectedYearOption.label
+              }
+            </p>
+          )}
+        </div>
+        <div className="relative">
+          <select
+            value={selectedYearOption.value}
+            onChange={handleYearChange}
+            className="p-2 pr-8 rounded border border-border bg-input text-sm appearance-none"
+            aria-label="Select time period"
+          >
+            {yearOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+            <svg className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+            </svg>
+          </div>
+        </div>
+      </div>
       
       {isLoading && <p className="text-muted-foreground">Loading heatmap data...</p>}
       

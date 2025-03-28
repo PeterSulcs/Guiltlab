@@ -31,13 +31,22 @@ export async function fetchGitHubContributions(
   endDate: string
 ): Promise<ContributionData[]> {
   try {
-    // GitHub has a specific API endpoint for contribution calendar data
-    // We're using their newer GraphQL API to get this data
+    // GitHub's GraphQL API requires specific date formatting to fetch historical contributions
+    const startYear = new Date(startDate).getFullYear();
+    const endYear = new Date(endDate).getFullYear();
+    
+    console.log(`Fetching GitHub contributions for ${instance.username} from ${startDate} to ${endDate} (${startYear}-${endYear})`);
+    
+    // Build a query that specifically requests the contribution collection for the time period
     const query = `
       query {
         user(login: "${instance.username}") {
-          contributionsCollection {
+          contributionsCollection(
+            from: "${startDate}T00:00:00Z",
+            to: "${endDate}T23:59:59Z"
+          ) {
             contributionCalendar {
+              totalContributions
               weeks {
                 contributionDays {
                   date
@@ -61,6 +70,9 @@ export async function fetchGitHubContributions(
       }
     );
     
+    // Debug response to see what GitHub is returning
+    console.log('GitHub API response:', JSON.stringify(response.data, null, 2));
+    
     // Process the response into our contribution data format
     const contributionCalendar = 
       response.data?.data?.user?.contributionsCollection?.contributionCalendar;
@@ -70,36 +82,35 @@ export async function fetchGitHubContributions(
       return [];
     }
     
+    console.log(`Total contributions from GitHub for ${instance.name}: ${contributionCalendar.totalContributions}`);
+    
     const weeks = contributionCalendar.weeks || [];
     
-    // Create a map of dates to contribution counts
+    // Create an array of contributions
     const contributions: ContributionData[] = [];
     
-    // Filter contributions by date range
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-    
+    // Process contributions - no need to filter further since we already specified the date range in the query
     for (const week of weeks) {
       for (const day of week.contributionDays) {
         const date = day.date;
-        const dayDate = new Date(date);
+        const count = day.contributionCount;
         
-        // Check if the date is within our range
-        if (dayDate >= startDateObj && dayDate <= endDateObj) {
+        if (count > 0) {
           contributions.push({
             date,
-            count: day.contributionCount,
+            count,
             instanceId: instance.id
           });
         }
       }
     }
     
-    console.log(`Counted contributions for GitHub (${instance.name}):`, contributions);
+    console.log(`Fetched ${contributions.length} contributions for GitHub (${instance.name})`);
     
     return contributions;
   } catch (error) {
     console.error(`Error fetching contributions from GitHub (${instance.name}):`, error);
+    console.error('Error details:', error);
     throw error;
   }
 } 
