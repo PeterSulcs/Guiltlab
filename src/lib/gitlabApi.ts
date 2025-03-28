@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { ContributionData, GitLabInstance, UserData } from '../types';
 
+// Define a type for GitLab project structure
+type GitLabProject = {
+  id: number;
+  name: string;
+};
+
 // Function to fetch user data from GitLab
 export async function fetchGitLabUser(instance: GitLabInstance): Promise<UserData> {
   try {
@@ -101,23 +107,25 @@ async function fetchHistoricalContributions(
     const projectsToProcess = projects.slice(0, 5);
     
     for (const project of projectsToProcess) {
-      console.log(`Processing project ${project.name} (${project.id})...`);
+      const typedProject = project as GitLabProject;
+      console.log(`Processing project ${typedProject.name} (${typedProject.id})...`);
       
       try {
         // Get all commits by the user in this project
         const commits = await fetchProjectCommits(
           instance, 
-          project.id, 
+          typedProject.id, 
           overrideUsername || user.username,
           startDate,
           endDate
         );
         
-        console.log(`Found ${commits.length} commits in project ${project.name}`);
+        console.log(`Found ${commits.length} commits in project ${typedProject.name}`);
         
         // Count commits by date
         commits.forEach(commit => {
-          const commitDate = commit.created_at.split('T')[0];
+          const typedCommit = commit as { created_at: string };
+          const commitDate = typedCommit.created_at.split('T')[0];
           const date = new Date(commitDate);
           
           // Ensure the date is within our range
@@ -129,7 +137,7 @@ async function fetchHistoricalContributions(
           }
         });
       } catch (error) {
-        console.error(`Error processing project ${project.name}:`, error);
+        console.error(`Error processing project ${typedProject.name}:`, error);
         // Continue with other projects
       }
     }
