@@ -56,11 +56,15 @@ export interface LeaderboardEntry {
 
 export interface TeamMember {
   id: string;
+  displayName: string;
   username: string;
-  name: string;
   avatarUrl?: string;
-  gitlabUsername: string;
   addedAt: string;
+  instanceUsernames: {
+    instanceId: string;
+    username: string;
+    instanceType: 'gitlab' | 'github';
+  }[];
 }
 
 export interface TeamLeaderboardEntry {

@@ -54,7 +54,8 @@ export function TeamProvider({ children }: TeamProviderProps) {
     const newMember: TeamMember = {
       ...member,
       id: crypto.randomUUID(),
-      addedAt: new Date().toISOString()
+      addedAt: new Date().toISOString(),
+      instanceUsernames: member.instanceUsernames || []
     };
     setTeamMembers(prevMembers => [...prevMembers, newMember]);
   };

@@ -28,19 +28,23 @@ export async function fetchGitHubUser(instance: GitHubInstance): Promise<UserDat
 export async function fetchGitHubContributions(
   instance: GitHubInstance, 
   startDate: string, 
-  endDate: string
+  endDate: string,
+  overrideUsername?: string
 ): Promise<ContributionData[]> {
   try {
+    // Use overrideUsername if provided, otherwise use instance username
+    const username = overrideUsername || instance.username;
+    
     // GitHub's GraphQL API requires specific date formatting to fetch historical contributions
     const startYear = new Date(startDate).getFullYear();
     const endYear = new Date(endDate).getFullYear();
     
-    console.log(`Fetching GitHub contributions for ${instance.username} from ${startDate} to ${endDate} (${startYear}-${endYear})`);
+    console.log(`Fetching GitHub contributions for ${username} from ${startDate} to ${endDate} (${startYear}-${endYear})`);
     
     // Build a query that specifically requests the contribution collection for the time period
     const query = `
       query {
-        user(login: "${instance.username}") {
+        user(login: "${username}") {
           contributionsCollection(
             from: "${startDate}T00:00:00Z",
             to: "${endDate}T23:59:59Z"

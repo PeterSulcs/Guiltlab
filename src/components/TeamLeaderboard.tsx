@@ -5,6 +5,7 @@ import { useTeam } from '../lib/teamContext';
 import { useRepo } from '../lib/repoContext';
 import { useDateRange } from '../lib/dateContext';
 import { fetchContributions } from '../lib/gitlabApi';
+import { fetchGitHubContributions } from '../lib/githubApi';
 import { TeamLeaderboardEntry, TeamMember } from '../types';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
@@ -13,7 +14,7 @@ import { useTheme } from '../lib/themeContext';
 
 export default function TeamLeaderboard() {
   const { teamMembers, loading: teamLoading } = useTeam();
-  const { gitlabInstances, loading: repoLoading } = useRepo();
+  const { gitlabInstances, githubInstances, loading: repoLoading } = useRepo();
   const { dateRange } = useDateRange();
   const { resolvedTheme } = useTheme();
   const [leaderboardData, setLeaderboardData] = useState<TeamLeaderboardEntry[]>([]);
@@ -21,8 +22,9 @@ export default function TeamLeaderboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Skip if there are no team members or GitLab instances
-    if (teamLoading || repoLoading || teamMembers.length === 0 || gitlabInstances.length === 0) {
+    // Skip if there are no team members or instances
+    if (teamLoading || repoLoading || teamMembers.length === 0 || 
+        (gitlabInstances.length === 0 && githubInstances.length === 0)) {
       return;
     }
 
@@ -31,7 +33,7 @@ export default function TeamLeaderboard() {
       setError('');
 
       try {
-        // Fetch contributions for each team member across all GitLab instances
+        // Fetch contributions for each team member across all instances
         const leaderboardEntries: TeamLeaderboardEntry[] = [];
 
         // Process each team member
@@ -48,20 +50,27 @@ export default function TeamLeaderboard() {
           // Process each GitLab instance
           for (const instance of gitlabInstances) {
             try {
-              // Fetch contributions using GitLab username across all instances
-              // For simplicity, we're using the member's gitlabUsername directly
+              // Find if the team member has a username for this instance
+              const instanceUsername = member.instanceUsernames?.find(
+                iu => iu.instanceId === instance.id && iu.instanceType === 'gitlab'
+              );
+              
+              // Skip if no username is defined for this instance
+              if (!instanceUsername) {
+                console.log(`No GitLab username defined for ${member.displayName} on ${instance.name}`);
+                continue;
+              }
+
+              // Fetch contributions using the member's GitLab username for this instance
               const contributions = await fetchContributions(
-                {
-                  ...instance,
-                  // Don't override with team member's GitLab username here
-                },
+                instance,
                 dateRange.startDateString,
                 dateRange.endDateString,
-                member.gitlabUsername  // Pass as an optional parameter to fetchContributions
+                instanceUsername.username
               );
 
               // Sum contributions for this instance
-              const instanceTotal = contributions.reduce((total, item) => total + item.count, 0);
+              const instanceTotal = contributions.reduce((total: number, item: any) => total + item.count, 0);
               
               // Add to instance breakdown
               contributionsByInstance.push({
@@ -71,14 +80,59 @@ export default function TeamLeaderboard() {
               });
 
               // Aggregate contributions by date
-              contributions.forEach(contribution => {
+              contributions.forEach((contribution: any) => {
                 const existingCount = contributionsByDate.get(contribution.date) || 0;
                 contributionsByDate.set(contribution.date, existingCount + contribution.count);
               });
 
               totalContributions += instanceTotal;
             } catch (error) {
-              console.error(`Error fetching contributions for ${member.name} on ${instance.name}:`, error);
+              console.error(`Error fetching GitLab contributions for ${member.displayName} on ${instance.name}:`, error);
+              // Continue with other instances even if one fails
+            }
+          }
+
+          // Process each GitHub instance
+          for (const instance of githubInstances) {
+            try {
+              // Find if the team member has a username for this instance
+              const instanceUsername = member.instanceUsernames?.find(
+                iu => iu.instanceId === instance.id && iu.instanceType === 'github'
+              );
+              
+              // Skip if no username is defined for this instance
+              if (!instanceUsername) {
+                console.log(`No GitHub username defined for ${member.displayName} on ${instance.name}`);
+                continue;
+              }
+
+              // Fetch contributions using the member's GitHub username for this instance
+              const contributions = await fetchGitHubContributions(
+                instance,
+                dateRange.startDateString,
+                dateRange.endDateString,
+                instanceUsername.username
+              );
+
+              // Sum contributions for this instance
+              const instanceTotal = contributions.reduce((total: number, item: any) => total + item.count, 0);
+              
+              // Add to instance breakdown
+              contributionsByInstance.push({
+                instanceId: instance.id,
+                instanceName: instance.name,
+                contributions: instanceTotal
+              });
+
+              // Aggregate contributions by date
+              contributions.forEach((contribution: any) => {
+                const existingCount = contributionsByDate.get(contribution.date) || 0;
+                contributionsByDate.set(contribution.date, existingCount + contribution.count);
+              });
+
+              totalContributions += instanceTotal;
+            } catch (error) {
+              console.error(`Error fetching GitHub contributions for ${member.displayName} on ${instance.name}:`, error);
               // Continue with other instances even if one fails
             }
           }
@@ -101,14 +155,14 @@ export default function TeamLeaderboard() {
         setLeaderboardData(leaderboardEntries);
       } catch (error) {
         console.error('Error fetching team leaderboard data:', error);
-        setError('Failed to fetch team contribution data. Please check your team members and GitLab instances.');
+        setError('Failed to fetch team contribution data. Please check your team members and instance configurations.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchLeaderboardData();
-  }, [teamMembers, gitlabInstances, dateRange, teamLoading, repoLoading]);
+  }, [teamMembers, gitlabInstances, githubInstances, dateRange, teamLoading, repoLoading]);
 
   // Calculate color based on contribution count
   const getColorClass = (count: number) => {
@@ -131,12 +185,12 @@ export default function TeamLeaderboard() {
     );
   }
 
-  if (gitlabInstances.length === 0) {
+  if (gitlabInstances.length === 0 && githubInstances.length === 0) {
     return (
       <div className="bg-card-background rounded-lg shadow border border-border p-6">
         <h2 className="text-xl font-semibold mb-4">Team Leaderboard</h2>
         <p className="text-muted-foreground">
-          No GitLab instances configured. Add GitLab instances to see the leaderboard.
+          No GitLab or GitHub instances configured. Add instances to see the leaderboard.
         </p>
       </div>
     );
@@ -146,7 +200,7 @@ export default function TeamLeaderboard() {
     <div className="space-y-6">
       {/* Leaderboard Table */}
       <div className="bg-card-background rounded-lg shadow border border-border p-6">
-        <h2 className="text-xl font-semibold mb-4">Team Leaderboard</h2>
+        <h2 className="text-xl font-semibold mb-4">Contributions by Team Member</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Contributions for {dateRange.label}
         </p>
@@ -176,9 +230,9 @@ export default function TeamLeaderboard() {
                     <td className="px-4 py-3">
                       <div className="flex items-center">
                         <span className="mr-2 text-muted-foreground">{index + 1}.</span>
-                        <span className="font-medium">{entry.member.name}</span>
+                        <span className="font-medium">{entry.member.displayName}</span>
                         <span className="ml-2 text-sm text-muted-foreground">
-                          @{entry.member.gitlabUsername}
+                          @{entry.member.username}
                         </span>
                       </div>
                     </td>
@@ -211,7 +265,7 @@ export default function TeamLeaderboard() {
         <div key={entry.member.id} className="bg-card-background rounded-lg shadow border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">
-              {entry.member.name}'s Contributions
+              {entry.member.displayName}'s Contributions
             </h2>
             <p className="text-sm text-muted-foreground">
               {entry.totalContributions} contributions in {dateRange.label}

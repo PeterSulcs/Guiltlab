@@ -78,15 +78,8 @@ export default function TeamPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex flex-wrap items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Team Leaderboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Track and compare contributions across your team
-          </p>
-        </div>
-        
-        <div className="relative mt-4 md:mt-0">
+      <div className="flex justify-end mb-8">
+        <div className="relative">
           <select
             value={dateRange.value}
             onChange={handleYearChange}

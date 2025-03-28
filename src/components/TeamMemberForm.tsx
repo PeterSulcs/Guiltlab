@@ -2,14 +2,82 @@
 
 import React, { useState } from 'react';
 import { useTeam } from '../lib/teamContext';
+import { useRepo } from '../lib/repoContext';
 
 export default function TeamMemberForm() {
   const { addTeamMember } = useTeam();
-  const [name, setName] = useState('');
+  const { gitlabInstances, githubInstances } = useRepo();
+  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
-  const [gitlabUsername, setGitlabUsername] = useState('');
+  const [instanceUsernames, setInstanceUsernames] = useState<{
+    instanceId: string;
+    username: string;
+    instanceType: 'gitlab' | 'github';
+  }[]>([]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Handle adding a GitLab instance username
+  const handleAddGitLabUsername = (instanceId: string, username: string) => {
+    if (!username.trim()) return;
+    
+    // Check if we already have a username for this instance
+    const existingIndex = instanceUsernames.findIndex(iu => iu.instanceId === instanceId);
+    
+    if (existingIndex >= 0) {
+      // Update existing
+      setInstanceUsernames(prev => {
+        const newUsernames = [...prev];
+        newUsernames[existingIndex] = {
+          instanceId,
+          username: username.trim(),
+          instanceType: 'gitlab'
+        };
+        return newUsernames;
+      });
+    } else {
+      // Add new
+      setInstanceUsernames(prev => [
+        ...prev,
+        {
+          instanceId,
+          username: username.trim(),
+          instanceType: 'gitlab'
+        }
+      ]);
+    }
+  };
+
+  // Handle adding a GitHub instance username
+  const handleAddGitHubUsername = (instanceId: string, username: string) => {
+    if (!username.trim()) return;
+    
+    // Check if we already have a username for this instance
+    const existingIndex = instanceUsernames.findIndex(iu => iu.instanceId === instanceId);
+    
+    if (existingIndex >= 0) {
+      // Update existing
+      setInstanceUsernames(prev => {
+        const newUsernames = [...prev];
+        newUsernames[existingIndex] = {
+          instanceId,
+          username: username.trim(),
+          instanceType: 'github'
+        };
+        return newUsernames;
+      });
+    } else {
+      // Add new
+      setInstanceUsernames(prev => [
+        ...prev,
+        {
+          instanceId,
+          username: username.trim(),
+          instanceType: 'github'
+        }
+      ]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,24 +85,21 @@ export default function TeamMemberForm() {
     setIsSubmitting(true);
 
     try {
-      if (!name.trim() || !gitlabUsername.trim()) {
-        throw new Error('Name and GitLab username are required');
+      if (!displayName.trim() || instanceUsernames.length === 0) {
+        throw new Error('Display name and at least one instance username are required');
       }
-
-      // Prepare username if not provided
-      const finalUsername = username.trim() || gitlabUsername.trim();
 
       // Add the team member
       addTeamMember({
-        name: name.trim(),
-        username: finalUsername,
-        gitlabUsername: gitlabUsername.trim(),
+        displayName: displayName.trim(),
+        username: username.trim() || displayName.trim(),
+        instanceUsernames,
       });
 
       // Reset the form
-      setName('');
+      setDisplayName('');
       setUsername('');
-      setGitlabUsername('');
+      setInstanceUsernames([]);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -44,6 +109,12 @@ export default function TeamMemberForm() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper function to get current username for an instance
+  const getInstanceUsername = (instanceId: string) => {
+    const instance = instanceUsernames.find(iu => iu.instanceId === instanceId);
+    return instance ? instance.username : '';
   };
 
   return (
@@ -59,14 +130,14 @@ export default function TeamMemberForm() {
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1">
-              Name <span className="text-destructive">*</span>
+            <label htmlFor="displayName" className="block text-sm font-medium mb-1">
+              Display Name <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              id="displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md bg-input"
               placeholder="John Doe"
               required
@@ -86,27 +157,49 @@ export default function TeamMemberForm() {
               placeholder="johndoe"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Display username (defaults to GitLab username if empty)
+              Display username (defaults to display name if empty)
             </p>
           </div>
           
-          <div>
-            <label htmlFor="gitlabUsername" className="block text-sm font-medium mb-1">
-              GitLab Username <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="text"
-              id="gitlabUsername"
-              value={gitlabUsername}
-              onChange={(e) => setGitlabUsername(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md bg-input"
-              placeholder="johndoe"
-              required
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Username used across GitLab instances to fetch contributions
-            </p>
-          </div>
+          {gitlabInstances.length > 0 && (
+            <div>
+              <h4 className="font-medium text-sm mb-2">GitLab Usernames</h4>
+              <div className="space-y-3">
+                {gitlabInstances.map(instance => (
+                  <div key={instance.id} className="flex items-center">
+                    <div className="w-1/3 mr-2 text-sm text-muted-foreground">{instance.name}:</div>
+                    <input
+                      type="text"
+                      value={getInstanceUsername(instance.id)}
+                      onChange={(e) => handleAddGitLabUsername(instance.id, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-border rounded-md bg-input text-sm"
+                      placeholder={`GitLab username for ${instance.name}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {githubInstances.length > 0 && (
+            <div>
+              <h4 className="font-medium text-sm mb-2">GitHub Usernames</h4>
+              <div className="space-y-3">
+                {githubInstances.map(instance => (
+                  <div key={instance.id} className="flex items-center">
+                    <div className="w-1/3 mr-2 text-sm text-muted-foreground">{instance.name}:</div>
+                    <input
+                      type="text"
+                      value={getInstanceUsername(instance.id)}
+                      onChange={(e) => handleAddGitHubUsername(instance.id, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-border rounded-md bg-input text-sm"
+                      placeholder={`GitHub username for ${instance.name}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           <div className="pt-2">
             <button
