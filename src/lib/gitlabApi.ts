@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { ContributionData, GitLabInstance, UserData } from '../types';
 
+interface GitLabEvent {
+  action_name: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
 // Function to fetch user data from GitLab
 export async function fetchGitLabUser(instance: GitLabInstance): Promise<UserData> {
   try {
@@ -53,8 +59,8 @@ async function fetchEventsData(
   username: string,
   startDate: string,
   endDate: string
-): Promise<any[]> {
-  let allEvents: any[] = [];
+): Promise<GitLabEvent[]> {
+  let allEvents: GitLabEvent[] = [];
   let page = 1;
   let hasMoreEvents = true;
 
@@ -93,7 +99,7 @@ async function fetchEventsData(
           }
         );
 
-        const events = response.data;
+        const events = response.data as GitLabEvent[];
         if (events.length === 0) {
           hasMoreEvents = false;
         } else {
@@ -118,7 +124,7 @@ async function fetchEventsData(
 }
 
 // Helper function to process events into contributions
-function processEventsToContributions(events: any[], instanceId: string): ContributionData[] {
+function processEventsToContributions(events: GitLabEvent[], instanceId: string): ContributionData[] {
   const contributionMap = new Map<string, number>();
   
   // Define the event types we want to count

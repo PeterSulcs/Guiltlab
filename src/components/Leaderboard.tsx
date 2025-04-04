@@ -5,8 +5,7 @@ import { useRepo } from '../lib/repoContext';
 import { useDateRange } from '../lib/dateContext';
 import { fetchContributions, fetchGitLabUser } from '../lib/gitlabApi';
 import { fetchGitHubContributions, fetchGitHubUser } from '../lib/githubApi';
-import { UserData, ContributionData } from '../types';
-import axios from 'axios';
+import { UserData } from '../types';
 
 export default function Leaderboard() {
   const { gitlabInstances, githubInstances, loading } = useRepo();

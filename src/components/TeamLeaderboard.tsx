@@ -10,7 +10,6 @@ import { TeamLeaderboardEntry } from '../types';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip } from 'react-tooltip';
-import axios from 'axios';
 
 export default function TeamLeaderboard() {
   const { teamMembers, loading: teamLoading } = useTeam();
@@ -358,13 +357,23 @@ export default function TeamLeaderboard() {
                   let htmlContent = `${dayOfWeek}, ${formattedDate}: ${value.count} contributions`;
 
                   // Group contributions by type using the actual per-instance data
-                  const typedValue = value as any;
+                  interface HeatmapValue {
+                    date: string;
+                    count: number;
+                    byInstance?: {
+                      instanceId: string;
+                      instanceName: string;
+                      count: number;
+                    }[];
+                  }
+
+                  const typedValue = value as HeatmapValue;
                   if (typedValue.byInstance && typedValue.byInstance.length > 0) {
                     const gitlabContributions = typedValue.byInstance.filter(
-                      (c: any) => gitlabInstances.find(i => i.id === c.instanceId)
+                      (c) => gitlabInstances.find(i => i.id === c.instanceId)
                     );
                     const githubContributions = typedValue.byInstance.filter(
-                      (c: any) => githubInstances.find(i => i.id === c.instanceId)
+                      (c) => githubInstances.find(i => i.id === c.instanceId)
                     );
 
                     // Add instance breakdowns if there are any
@@ -373,7 +382,7 @@ export default function TeamLeaderboard() {
                     // Add GitLab contributions if any
                     if (gitlabContributions.length > 0) {
                       htmlContent += '<strong>GitLab:</strong><br/>';
-                      gitlabContributions.forEach((c: any) => {
+                      gitlabContributions.forEach((c) => {
                         htmlContent += `&nbsp;&nbsp;${c.instanceName}: ${c.count}<br/>`;
                       });
                     }
@@ -381,7 +390,7 @@ export default function TeamLeaderboard() {
                     // Add GitHub contributions if any
                     if (githubContributions.length > 0) {
                       htmlContent += '<strong>GitHub:</strong><br/>';
-                      githubContributions.forEach((c: any) => {
+                      githubContributions.forEach((c) => {
                         htmlContent += `&nbsp;&nbsp;${c.instanceName}: ${c.count}<br/>`;
                       });
                     }

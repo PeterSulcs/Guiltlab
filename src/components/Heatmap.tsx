@@ -451,7 +451,6 @@ export default function Heatmap() {
                 
                 typedValue.contributions.forEach((c) => {
                   // Find the instance name - could be GitLab or GitHub
-                  let instanceName = 'Unknown';
                   
                   // First check GitLab instances
                   const gitlabInstance = gitlabInstances.find(i => i.id === c.instanceId);
