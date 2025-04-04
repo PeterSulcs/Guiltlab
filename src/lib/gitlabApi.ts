@@ -82,7 +82,10 @@ async function fetchEventsData(
 
     const userId = userResponse.data[0].id;
 
-    while (hasMoreEvents && page <= 5) {
+    // Set a high but reasonable maximum page limit to prevent infinite loops
+    const MAX_PAGES = 100; // This would allow up to 10,000 events
+
+    while (hasMoreEvents && page <= MAX_PAGES) {
       try {
         const response = await axios.get(
           `${instance.baseUrl}/api/v4/users/${userId}/events`,
@@ -98,16 +101,18 @@ async function fetchEventsData(
             }
           }
         );
-
+        console.log(`request url with params: ${instance.baseUrl}/api/v4/users/${userId}/events?after=${startDate}&before=${endDate}&per_page=100&page=${page}`)
         const events = response.data as GitLabEvent[];
         if (events.length === 0) {
           hasMoreEvents = false;
+          console.log(`no more events because no events found on page ${page}`) 
         } else {
           allEvents = [...allEvents, ...events];
           page++;
-          if (events.length < 100) {
-            hasMoreEvents = false;
-          }
+          // if (events.length < 100) {
+          //   hasMoreEvents = false;
+          //   console.log(`no more events because less than 100 on page ${page}`) 
+          // }
         }
       } catch (error) {
         console.error(`Error fetching events page ${page}:`, error);
@@ -119,7 +124,7 @@ async function fetchEventsData(
     // Return empty array instead of throwing to allow the app to continue
     return [];
   }
-
+  console.log(`fetched ${page} pages of events`)
   return allEvents;
 }
 
@@ -152,22 +157,11 @@ function processEventsToContributions(events: GitLabEvent[], instanceId: string)
       return;
     }
     
-    // Parse the date properly to ensure accuracy
-    // GitLab's API returns dates in UTC, but we need to adjust for local time
-    const eventDate = new Date(event.created_at);
+    // Use the date string directly from the API, taking just the YYYY-MM-DD part
+    const date = event.created_at.split('T')[0];
     
-    // Add one day to match GitLab's heatmap
-    // This is needed because GitLab's heatmap appears to use a different date calculation
-    eventDate.setDate(eventDate.getDate() + 1);
-    
-    // Extract the date components
-    const year = eventDate.getFullYear();
-    const month = String(eventDate.getMonth() + 1).padStart(2, '0');
-    const day = String(eventDate.getDate()).padStart(2, '0');
-    const date = `${year}-${month}-${day}`;
-    
-    // Log each event being processed with the parsed date
-    console.log(`Processing event: ${date} - ${actionName} (original: ${event.created_at}, adjusted: ${eventDate.toISOString()})`);
+    // Log each event being processed with detailed activity information
+    console.log(`Processing event: ${date} - Type: ${actionName} - Action: ${event.action_name} - Target Type: ${event.target_type || 'N/A'} - Original timestamp: ${event.created_at}`);
     
     // Count every event as one contribution
     const currentCount = contributionMap.get(date) || 0;
