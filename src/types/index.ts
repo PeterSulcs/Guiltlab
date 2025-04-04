@@ -78,5 +78,10 @@ export interface TeamLeaderboardEntry {
   contributionsByDate: {
     date: string;
     count: number;
+    byInstance: {
+      instanceId: string;
+      instanceName: string;
+      count: number;
+    }[];
   }[];
 } 

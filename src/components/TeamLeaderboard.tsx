@@ -43,24 +43,30 @@ export default function TeamLeaderboard() {
             contributions: number;
           }[] = [];
 
-          const contributionsByDate = new Map<string, number>();
+          // Track contributions by date AND instance
+          const contributionsByDate = new Map<string, {
+            total: number,
+            byInstance: {
+              instanceId: string;
+              instanceName: string;
+              count: number;
+            }[];
+          }>();
+          
           let totalContributions = 0;
 
           // Process each GitLab instance
           for (const instance of gitlabInstances) {
             try {
-              // Find if the team member has a username for this instance
               const instanceUsername = member.instanceUsernames?.find(
                 iu => iu.instanceId === instance.id && iu.instanceType === 'gitlab'
               );
               
-              // Skip if no username is defined for this instance
               if (!instanceUsername) {
                 console.log(`No GitLab username defined for ${member.displayName} on ${instance.name}`);
                 continue;
               }
 
-              // Fetch contributions using the date range from context
               const contributions = await fetchContributions(
                 instance,
                 instanceUsername.username,
@@ -68,11 +74,20 @@ export default function TeamLeaderboard() {
                 dateRange.endDateString
               );
 
-              // Process contributions
+              // Process contributions with instance information
               contributions.forEach(contribution => {
                 const date = contribution.date;
                 const count = contribution.count;
-                contributionsByDate.set(date, (contributionsByDate.get(date) || 0) + count);
+                
+                const existingDate = contributionsByDate.get(date) || { total: 0, byInstance: [] };
+                existingDate.total += count;
+                existingDate.byInstance.push({
+                  instanceId: instance.id,
+                  instanceName: instance.name,
+                  count: count
+                });
+                
+                contributionsByDate.set(date, existingDate);
                 totalContributions += count;
               });
 
@@ -81,40 +96,36 @@ export default function TeamLeaderboard() {
                 return total + item.count;
               }, 0);
               
-              // Add to instance breakdown
-              contributionsByInstance.push({
-                instanceId: instance.id,
-                instanceName: instance.name,
-                contributions: instanceTotal
-              });
+              if (instanceTotal > 0) {
+                contributionsByInstance.push({
+                  instanceId: instance.id,
+                  instanceName: instance.name,
+                  contributions: instanceTotal
+                });
+              }
             } catch (error) {
               console.error(`Error fetching GitLab contributions for ${member.displayName} on ${instance.name}:`, error);
-              // Continue with other instances even if one fails
             }
           }
 
           // Process each GitHub instance
           for (const instance of githubInstances) {
             try {
-              // Find if the team member has a username for this instance
               const instanceUsername = member.instanceUsernames?.find(
                 iu => iu.instanceId === instance.id && iu.instanceType === 'github'
               );
               
-              // Skip if no username is defined for this instance
               if (!instanceUsername) {
                 console.log(`No GitHub username defined for ${member.displayName} on ${instance.name}`);
                 continue;
               }
 
-              // Define a type for contribution data
               type Contribution = {
                 date: string;
                 count: number;
                 instanceId: string;
               };
 
-              // Fetch contributions using the member's GitHub username for this instance
               const contributions = await fetchGitHubContributions(
                 instance,
                 dateRange.startDateString,
@@ -122,41 +133,51 @@ export default function TeamLeaderboard() {
                 instanceUsername.username
               );
 
+              // Process contributions with instance information
+              contributions.forEach((contribution: unknown) => {
+                const typedContribution = contribution as Contribution;
+                const date = typedContribution.date;
+                const count = typedContribution.count;
+                
+                const existingDate = contributionsByDate.get(date) || { total: 0, byInstance: [] };
+                existingDate.total += count;
+                existingDate.byInstance.push({
+                  instanceId: instance.id,
+                  instanceName: instance.name,
+                  count: count
+                });
+                
+                contributionsByDate.set(date, existingDate);
+                totalContributions += count;
+              });
+
               // Sum contributions for this instance
               const instanceTotal = contributions.reduce((total: number, item: unknown) => {
                 const typedItem = item as Contribution;
                 return total + typedItem.count;
               }, 0);
               
-              // Add to instance breakdown
-              contributionsByInstance.push({
-                instanceId: instance.id,
-                instanceName: instance.name,
-                contributions: instanceTotal
-              });
-
-              // Aggregate contributions by date
-              contributions.forEach((contribution: unknown) => {
-                const typedContribution = contribution as Contribution;
-                const existingCount = contributionsByDate.get(typedContribution.date) || 0;
-                contributionsByDate.set(typedContribution.date, existingCount + typedContribution.count);
-              });
-
-              totalContributions += instanceTotal;
+              if (instanceTotal > 0) {
+                contributionsByInstance.push({
+                  instanceId: instance.id,
+                  instanceName: instance.name,
+                  contributions: instanceTotal
+                });
+              }
             } catch (error) {
               console.error(`Error fetching GitHub contributions for ${member.displayName} on ${instance.name}:`, error);
-              // Continue with other instances even if one fails
             }
           }
 
-          // Create leaderboard entry for this member
+          // Create leaderboard entry for this member with enhanced data structure
           leaderboardEntries.push({
             member,
             totalContributions,
             contributionsByInstance,
-            contributionsByDate: Array.from(contributionsByDate.entries()).map(([date, count]) => ({
+            contributionsByDate: Array.from(contributionsByDate.entries()).map(([date, data]) => ({
               date,
-              count
+              count: data.total,
+              byInstance: data.byInstance
             }))
           });
         }
@@ -302,7 +323,8 @@ export default function TeamLeaderboard() {
                 endDate={dateRange.endDate}
                 values={entry.contributionsByDate.map(item => ({
                   date: item.date,
-                  count: item.count
+                  count: item.count,
+                  byInstance: item.byInstance
                 }))}
                 classForValue={(value) => {
                   if (!value || value.count === 0) {
@@ -315,12 +337,59 @@ export default function TeamLeaderboard() {
                     return { 'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}` } as Record<string, string>;
                   }
 
-                  const date = new Date(value.date);
-                  const formattedDate = date.toLocaleDateString();
-                  
+                  // Format date - use local timezone to avoid date offset issues
+                  let date;
+                  if (typeof value.date === 'string') {
+                    // Create date using local timezone
+                    const [year, month, day] = value.date.split('-').map(Number);
+                    date = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+                  } else {
+                    date = value.date;
+                  }
+
+                  // Get day of week
+                  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                  const dayOfWeek = daysOfWeek[date.getDay()];
+
+                  // Format date as MM/DD/YYYY
+                  const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+
+                  // Format tooltip content with day of week
+                  let htmlContent = `${dayOfWeek}, ${formattedDate}: ${value.count} contributions`;
+
+                  // Group contributions by type using the actual per-instance data
+                  const typedValue = value as any;
+                  if (typedValue.byInstance && typedValue.byInstance.length > 0) {
+                    const gitlabContributions = typedValue.byInstance.filter(
+                      (c: any) => gitlabInstances.find(i => i.id === c.instanceId)
+                    );
+                    const githubContributions = typedValue.byInstance.filter(
+                      (c: any) => githubInstances.find(i => i.id === c.instanceId)
+                    );
+
+                    // Add instance breakdowns if there are any
+                    htmlContent += '<br/>';
+
+                    // Add GitLab contributions if any
+                    if (gitlabContributions.length > 0) {
+                      htmlContent += '<strong>GitLab:</strong><br/>';
+                      gitlabContributions.forEach((c: any) => {
+                        htmlContent += `&nbsp;&nbsp;${c.instanceName}: ${c.count}<br/>`;
+                      });
+                    }
+
+                    // Add GitHub contributions if any
+                    if (githubContributions.length > 0) {
+                      htmlContent += '<strong>GitHub:</strong><br/>';
+                      githubContributions.forEach((c: any) => {
+                        htmlContent += `&nbsp;&nbsp;${c.instanceName}: ${c.count}<br/>`;
+                      });
+                    }
+                  }
+
                   return {
                     'data-tooltip-id': `team-heatmap-tooltip-${entry.member.id}`,
-                    'data-tooltip-content': `${formattedDate}: ${value.count} contributions`,
+                    'data-tooltip-html': htmlContent,
                   } as Record<string, string>;
                 }}
               />
