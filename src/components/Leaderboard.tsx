@@ -5,7 +5,8 @@ import { useRepo } from '../lib/repoContext';
 import { useDateRange } from '../lib/dateContext';
 import { fetchContributions, fetchGitLabUser } from '../lib/gitlabApi';
 import { fetchGitHubContributions, fetchGitHubUser } from '../lib/githubApi';
-import { UserData } from '../types';
+import { UserData, ContributionData } from '../types';
+import axios from 'axios';
 
 export default function Leaderboard() {
   const { gitlabInstances, githubInstances, loading } = useRepo();
@@ -42,6 +43,7 @@ export default function Leaderboard() {
             // Fetch contributions using the date range from context
             const contributions = await fetchContributions(
               instance, 
+              userData.username,
               dateRange.startDateString, 
               dateRange.endDateString
             );
@@ -69,8 +71,9 @@ export default function Leaderboard() {
                 }]
               });
             }
-          } catch (err) {
-            console.error(`Error processing GitLab instance ${instance.name}:`, err);
+          } catch (error) {
+            console.error(`Error fetching GitLab data for ${instance.name}:`, error);
+            // Continue with other instances even if one fails
           }
         }
         

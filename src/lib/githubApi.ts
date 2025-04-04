@@ -100,8 +100,13 @@ export async function fetchGitHubContributions(
         const count = day.contributionCount;
         
         if (count > 0) {
+          // Adjust the date by adding one day to match GitLab's heatmap
+          const dateObj = new Date(date);
+          dateObj.setDate(dateObj.getDate() + 1);
+          const adjustedDate = dateObj.toISOString().split('T')[0];
+          
           contributions.push({
-            date,
+            date: adjustedDate,
             count,
             instanceId: instance.id
           });

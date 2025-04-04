@@ -10,6 +10,7 @@ import { TeamLeaderboardEntry } from '../types';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import 'react-calendar-heatmap/dist/styles.css';
 import { Tooltip } from 'react-tooltip';
+import axios from 'axios';
 
 export default function TeamLeaderboard() {
   const { teamMembers, loading: teamLoading } = useTeam();
@@ -59,25 +60,25 @@ export default function TeamLeaderboard() {
                 continue;
               }
 
-              // Define a type for contribution data
-              type Contribution = {
-                date: string;
-                count: number;
-                instanceId: string;
-              };
-
-              // Fetch contributions using the member's GitLab username for this instance
+              // Fetch contributions using the date range from context
               const contributions = await fetchContributions(
                 instance,
+                instanceUsername.username,
                 dateRange.startDateString,
-                dateRange.endDateString,
-                instanceUsername.username
+                dateRange.endDateString
               );
 
+              // Process contributions
+              contributions.forEach(contribution => {
+                const date = contribution.date;
+                const count = contribution.count;
+                contributionsByDate.set(date, (contributionsByDate.get(date) || 0) + count);
+                totalContributions += count;
+              });
+
               // Sum contributions for this instance
-              const instanceTotal = contributions.reduce((total: number, item: unknown) => {
-                const typedItem = item as Contribution;
-                return total + typedItem.count;
+              const instanceTotal = contributions.reduce((total: number, item: { count: number }) => {
+                return total + item.count;
               }, 0);
               
               // Add to instance breakdown
@@ -86,15 +87,6 @@ export default function TeamLeaderboard() {
                 instanceName: instance.name,
                 contributions: instanceTotal
               });
-
-              // Aggregate contributions by date
-              contributions.forEach((contribution: unknown) => {
-                const typedContribution = contribution as Contribution;
-                const existingCount = contributionsByDate.get(typedContribution.date) || 0;
-                contributionsByDate.set(typedContribution.date, existingCount + typedContribution.count);
-              });
-
-              totalContributions += instanceTotal;
             } catch (error) {
               console.error(`Error fetching GitLab contributions for ${member.displayName} on ${instance.name}:`, error);
               // Continue with other instances even if one fails

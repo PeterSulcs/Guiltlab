@@ -340,6 +340,43 @@ export default function Heatmap() {
             :global(.react-calendar-heatmap .color-scale-8) { fill: var(--color-scale-8) !important; }
             :global(.react-calendar-heatmap .color-scale-9) { fill: var(--color-scale-9) !important; }
             :global(.react-calendar-heatmap .color-scale-10) { fill: var(--color-scale-10) !important; }
+            
+            /* Adjust the heatmap to start with Sunday */
+            :global(.react-calendar-heatmap .react-calendar-heatmap-month-labels) {
+              order: 1;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels) {
+              order: 0;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(1)) {
+              order: 7;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(2)) {
+              order: 1;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(3)) {
+              order: 2;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(4)) {
+              order: 3;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(5)) {
+              order: 4;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(6)) {
+              order: 5;
+            }
+            
+            :global(.react-calendar-heatmap .react-calendar-heatmap-weekday-labels > text:nth-child(7)) {
+              order: 6;
+            }
           `}</style>
           
           <CalendarHeatmap
@@ -374,15 +411,31 @@ export default function Heatmap() {
                 date = value.date;
               }
               
-              const formattedDate = date.toLocaleDateString();
+              // Get day of week
+              const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+              const dayOfWeek = daysOfWeek[date.getDay()];
+              
+              // Format date as MM/DD/YYYY
+              const formattedDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
               
               // We need to cast value to access our custom properties
               const typedValue = value as unknown as AggregatedContribution;
               
-              // Format tooltip content
-              let htmlContent = `${formattedDate}: ${value.count} contributions`;
+              // Format tooltip content with day of week
+              let htmlContent = `${dayOfWeek}, ${formattedDate}: ${value.count} contributions`;
               
-              if (typedValue.contributions) {
+              // Debug log to check if contributions array exists
+              console.log('Tooltip value:', typedValue);
+              
+              // Check if contributions array exists and has items
+              if (typedValue.contributions && typedValue.contributions.length > 0) {
+                // Add a line break before listing individual contributions
+                htmlContent += '<br/>';
+                
+                // Group contributions by instance type (GitLab vs GitHub)
+                const gitlabContributions: { name: string, count: number }[] = [];
+                const githubContributions: { name: string, count: number }[] = [];
+                
                 typedValue.contributions.forEach((c) => {
                   // Find the instance name - could be GitLab or GitHub
                   let instanceName = 'Unknown';
@@ -390,17 +443,31 @@ export default function Heatmap() {
                   // First check GitLab instances
                   const gitlabInstance = gitlabInstances.find(i => i.id === c.instanceId);
                   if (gitlabInstance) {
-                    instanceName = gitlabInstance.name;
+                    gitlabContributions.push({ name: gitlabInstance.name, count: c.count });
                   } else {
                     // Then check GitHub instances
                     const githubInstance = githubInstances.find(i => i.id === c.instanceId);
                     if (githubInstance) {
-                      instanceName = githubInstance.name;
+                      githubContributions.push({ name: githubInstance.name, count: c.count });
                     }
                   }
-                  
-                  htmlContent += `<br/>${instanceName}: ${c.count}`;
                 });
+                
+                // Add GitLab contributions if any
+                if (gitlabContributions.length > 0) {
+                  htmlContent += '<strong>GitLab:</strong><br/>';
+                  gitlabContributions.forEach(c => {
+                    htmlContent += `&nbsp;&nbsp;${c.name}: ${c.count}<br/>`;
+                  });
+                }
+                
+                // Add GitHub contributions if any
+                if (githubContributions.length > 0) {
+                  htmlContent += '<strong>GitHub:</strong><br/>';
+                  githubContributions.forEach(c => {
+                    htmlContent += `&nbsp;&nbsp;${c.name}: ${c.count}<br/>`;
+                  });
+                }
               }
               
               return {
