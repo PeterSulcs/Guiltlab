@@ -9,6 +9,7 @@ import { fetchContributions } from '../lib/gitlabApi';
 import { fetchGitHubContributions } from '../lib/githubApi';
 import { AggregatedContribution } from '../types';
 import { useDateRange } from '../lib/dateContext';
+import axios from 'axios';
 
 type YearOption = {
   label: string;
@@ -148,9 +149,21 @@ export default function Heatmap() {
         });
         
         // Fetch contributions for each GitLab instance
-        const gitlabContributionsPromises = gitlabInstances.map(instance => 
-          fetchContributions(instance, dateRange.startDateString, dateRange.endDateString)
-        );
+        const gitlabContributionsPromises = gitlabInstances.map(async instance => {
+          try {
+            // First get the current user's username from GitLab
+            const response = await axios.get(`${instance.baseUrl}/api/v4/user`, {
+              headers: {
+                'Private-Token': instance.token
+              }
+            });
+            const username = response.data.username;
+            return fetchContributions(instance, username, dateRange.startDateString, dateRange.endDateString);
+          } catch (error) {
+            console.error(`Error fetching user data from GitLab (${instance.name}):`, error);
+            return [];
+          }
+        });
         
         // Fetch contributions for each GitHub instance
         const githubContributionsPromises = githubInstances.map(instance => 
