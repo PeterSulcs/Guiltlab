@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { GitLabInstance } from '../types';
+import { GitLabInstance } from '@/types';
 import { useRepo } from '@/lib/repoContext';
+import Spinner from './ui/spinner';
 
 interface InstanceFormProps {
   instanceToEdit?: GitLabInstance;
@@ -10,13 +11,13 @@ interface InstanceFormProps {
 }
 
 export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormProps = {}) {
-  const { addGitLabInstance, editGitLabInstance } = useRepo();
+  const { addGitLabInstance, editGitLabInstance, error: contextError } = useRepo();
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [token, setToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   
   const isEditing = !!instanceToEdit;
   
@@ -32,8 +33,8 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
+    setError(null);
+    setSuccess(null);
     
     try {
       if (!name.trim() || !baseUrl.trim() || !token.trim()) {
@@ -49,7 +50,8 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
       
       if (isEditing && instanceToEdit) {
         // Update existing instance
-        editGitLabInstance(instanceToEdit.id, {
+        await editGitLabInstance(instanceToEdit.id, {
+          id: instanceToEdit.id,
           name: name.trim(),
           baseUrl: baseUrl.trim(),
           token: token.trim()
@@ -74,21 +76,26 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
         setSuccess('GitLab instance added successfully');
         
         // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(''), 3000);
+        setTimeout(() => setSuccess(null), 3000);
       }
-    } catch (err: unknown) {
-      const typedError = err as { message: string };
-      setError(typedError.message || 'Failed to add GitLab instance');
+    } catch (err: any) {
+      setError(err.message || 'Failed to save instance');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-card-background rounded-lg shadow border border-border p-4">
+    <div className="p-4 bg-card-background rounded-lg shadow border border-border">
       <h2 className="text-xl font-semibold mb-4">
         {isEditing ? 'Edit GitLab Instance' : 'Add GitLab Instance'}
       </h2>
+      
+      {contextError && (
+        <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
+          {contextError}
+        </div>
+      )}
       
       {error && (
         <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
@@ -97,7 +104,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
       )}
       
       {success && (
-        <div className="mb-4 p-2 bg-accent text-accent-foreground rounded">
+        <div className="mb-4 p-2 bg-primary/10 text-primary rounded">
           {success}
         </div>
       )}
@@ -113,7 +120,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full p-2 border border-border rounded bg-input"
-            placeholder="e.g., Company GitLab"
+            placeholder="Enter instance name"
             disabled={isSubmitting}
           />
         </div>
@@ -128,7 +135,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             className="w-full p-2 border border-border rounded bg-input"
-            placeholder="e.g., https://gitlab.com"
+            placeholder="Enter GitLab instance URL"
             disabled={isSubmitting}
           />
         </div>
@@ -160,9 +167,9 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
           >
             {isSubmitting 
               ? (
-                <span className="flex items-center justify-center">
-                  <div className="spinner"></div>
-                  {isEditing ? 'Saving...' : 'Adding...'}
+                <span className="flex items-center justify-center space-x-2">
+                  <Spinner className="h-5 w-5" />
+                  <span>{isEditing ? 'Saving...' : 'Adding...'}</span>
                 </span>
               ) 
               : (isEditing ? 'Save Changes' : 'Add GitLab Instance')}

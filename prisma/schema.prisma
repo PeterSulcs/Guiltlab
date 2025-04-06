@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model GitLabInstance {
+  id        String      @id @default(uuid())
+  name      String
+  baseUrl   String
+  token     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  users     GitLabUser[]
+  events    GitLabEvent[]
+}
+
+model GitLabUser {
+  id         Int      @id
+  instanceId String
+  username   String
+  name       String
+  email      String
+  avatar_url String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  instance   GitLabInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([id, instanceId])
+}
+
+model GitLabEvent {
+  id              Int      @id
+  instanceId      String
+  created_at      DateTime
+  action_name     String
+  target_id       Int
+  target_type     String
+  author_id       Int
+  author_username String
+  project_id      Int
+  project_name    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  instance        GitLabInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([id, instanceId])
+} 

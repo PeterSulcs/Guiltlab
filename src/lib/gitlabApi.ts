@@ -42,7 +42,7 @@ export async function fetchContributions(
     console.log(`Fetching GitLab contributions for ${targetUsername} from ${startDate} to ${endDate}`);
 
     // Fetch user events which include all activity
-    const events = await fetchEventsData(instance, targetUsername, startDate, endDate);
+    const events = await fetchEventsData(instance, new Date(startDate), new Date(endDate));
     const contributions = processEventsToContributions(events, instance.id);
     
     console.log(`Fetched ${contributions.length} contributions via events API for GitLab (${instance.name})`);
@@ -54,83 +54,30 @@ export async function fetchContributions(
 }
 
 // Helper function to fetch events data
-async function fetchEventsData(
-  instance: GitLabInstance,
-  username: string,
-  startDate: string,
-  endDate: string
-): Promise<GitLabEvent[]> {
-  let allEvents: GitLabEvent[] = [];
-  let page = 1;
-  let hasMoreEvents = true;
+export async function fetchEventsData(instance: GitLabInstance, startDate: Date, endDate: Date): Promise<GitLabEvent[]> {
+  const response = await fetch('/api/gitlab/events', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      instanceId: instance.id,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    }),
+  });
 
-  try {
-    // First try to fetch user ID to ensure the user exists
-    const userResponse = await axios.get(
-      `${instance.baseUrl}/api/v4/users?username=${username}`,
-      {
-        headers: {
-          'Private-Token': instance.token
-        }
-      }
-    );
-
-    if (!userResponse.data || userResponse.data.length === 0) {
-      console.warn(`User ${username} not found on ${instance.name}`);
-      return [];
-    }
-
-    const userId = userResponse.data[0].id;
-
-    // Set a high but reasonable maximum page limit to prevent infinite loops
-    const MAX_PAGES = 100; // This would allow up to 10,000 events
-
-    while (hasMoreEvents && page <= MAX_PAGES) {
-      try {
-        const response = await axios.get(
-          `${instance.baseUrl}/api/v4/users/${userId}/events`,
-          {
-            headers: {
-              'Private-Token': instance.token
-            },
-            params: {
-              after: startDate,
-              before: endDate,
-              per_page: 100,
-              page: page
-            }
-          }
-        );
-        console.log(`request url with params: ${instance.baseUrl}/api/v4/users/${userId}/events?after=${startDate}&before=${endDate}&per_page=100&page=${page}`)
-        const events = response.data as GitLabEvent[];
-        if (events.length === 0) {
-          hasMoreEvents = false;
-          console.log(`no more events because no events found on page ${page}`) 
-        } else {
-          allEvents = [...allEvents, ...events];
-          page++;
-          // if (events.length < 100) {
-          //   hasMoreEvents = false;
-          //   console.log(`no more events because less than 100 on page ${page}`) 
-          // }
-        }
-      } catch (error) {
-        console.error(`Error fetching events page ${page}:`, error);
-        hasMoreEvents = false;
-      }
-    }
-  } catch (error) {
-    console.error(`Error fetching user data or events for ${username} on ${instance.name}:`, error);
-    // Return empty array instead of throwing to allow the app to continue
-    return [];
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch events data');
   }
-  console.log(`fetched ${page} pages of events`)
-  return allEvents;
+
+  return response.json();
 }
 
 // Helper function to process events into contributions
-function processEventsToContributions(events: GitLabEvent[], instanceId: string): ContributionData[] {
-  const contributionMap = new Map<string, number>();
+export function processEventsToContributions(events: GitLabEvent[], instanceId: string): ContributionData[] {
+  const contributionsByDate = new Map<string, number>();
   
   // Define the event types we want to count
   const irrelevantEventTypes: string[] = [
@@ -164,18 +111,18 @@ function processEventsToContributions(events: GitLabEvent[], instanceId: string)
     console.log(`Processing event: ${date} - Type: ${actionName} - Action: ${event.action_name} - Target Type: ${event.target_type || 'N/A'} - Original timestamp: ${event.created_at}`);
     
     // Count every event as one contribution
-    const currentCount = contributionMap.get(date) || 0;
-    contributionMap.set(date, currentCount + 1);
+    const currentCount = contributionsByDate.get(date) || 0;
+    contributionsByDate.set(date, currentCount + 1);
     console.log(`Added 1 contribution for ${date}, new count: ${currentCount + 1}`);
   });
 
   // Log the final contribution counts
   console.log('Final contribution counts by date:');
-  contributionMap.forEach((count, date) => {
+  contributionsByDate.forEach((count, date) => {
     console.log(`${date}: ${count} contributions`);
   });
 
-  return Array.from(contributionMap.entries())
+  return Array.from(contributionsByDate.entries())
     .map(([date, count]) => ({
       date,
       count,
@@ -213,4 +160,42 @@ export function aggregateContributions(
   });
   
   return aggregatedMap;
+}
+
+export async function fetchUserData(instance: GitLabInstance): Promise<any> {
+  const response = await fetch('/api/gitlab/user', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      instanceId: instance.id,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch user data');
+  }
+
+  return response.json();
+}
+
+export async function fetchTeamData(instance: GitLabInstance): Promise<any[]> {
+  const response = await fetch('/api/gitlab/team', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      instanceId: instance.id,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch team data');
+  }
+
+  return response.json();
 }
