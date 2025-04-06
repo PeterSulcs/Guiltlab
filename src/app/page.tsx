@@ -1,5 +1,4 @@
 import React from 'react';
-import InstanceManager from '@/components/InstanceManager';
 import Heatmap from '@/components/Heatmap';
 import TeamLeaderboard from '@/components/TeamLeaderboard';
 import { RepoProvider } from '@/lib/repoContext';
@@ -15,10 +14,6 @@ function Dashboard() {
       <h1 className="text-3xl font-bold mb-8">GitLab Contribution Tracker</h1>
       
       <div className="space-y-8">
-        <section>
-          <InstanceManager />
-        </section>
-
         <section>
           <Heatmap startDate={startDate} endDate={endDate} />
         </section>

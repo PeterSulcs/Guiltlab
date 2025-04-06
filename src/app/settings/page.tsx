@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import InstanceForm from "@/components/InstanceForm";
-import InstanceList from "@/components/InstanceList";
+import InstanceManager from "@/components/InstanceManager";
 import GitHubInstanceForm from "@/components/GitHubInstanceForm";
 import GitHubInstanceList from "@/components/GitHubInstanceList";
 import TeamMemberForm from "@/components/TeamMemberForm";
@@ -59,8 +58,7 @@ export default function SettingsPage() {
       {/* Tab content */}
       {activeTab === 'gitlab' && (
         <div className="space-y-6">
-          <InstanceForm />
-          <InstanceList />
+          <InstanceManager />
         </div>
       )}
       
