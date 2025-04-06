@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { useRepo } from '@/lib/repoContext';
 import { useSelection } from '@/lib/selectionContext';
