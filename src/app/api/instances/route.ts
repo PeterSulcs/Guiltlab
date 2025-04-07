@@ -63,23 +63,29 @@ export async function POST(request: Request) {
 // PUT /api/instances - Update an instance
 export async function PUT(request: Request) {
   try {
-    const instance: GitLabInstance = await request.json();
+    const { id, name, baseUrl, token } = await request.json();
 
     // Validate required fields
-    if (!instance.id || !instance.name || !instance.baseUrl || !instance.token) {
+    if (!id || !name || !baseUrl) {
       return NextResponse.json(
-        { message: 'ID, name, baseUrl, and token are required' },
+        { message: 'ID, name, and baseUrl are required' },
         { status: 400 }
       );
     }
 
     // Update the instance
     const updatedInstance = await prisma.gitLabInstance.update({
-      where: { id: instance.id },
+      where: { id },
       data: {
-        name: instance.name,
-        baseUrl: instance.baseUrl,
-        token: instance.token,
+        name,
+        baseUrl,
+        ...(token ? { token } : {}), // Only update token if provided
+      },
+      select: {
+        id: true,
+        name: true,
+        baseUrl: true,
+        // Don't return the token for security
       },
     });
 

@@ -42,9 +42,9 @@ export default function InstanceManager() {
     const instance = instances.find(i => i.id === id);
     if (instance) {
       setFormData({
-        name: instance.name,
-        baseUrl: instance.baseUrl,
-        token: instance.token,
+        name: instance.name || '',
+        baseUrl: instance.baseUrl || '',
+        token: '',
       });
       setEditingId(id);
     }

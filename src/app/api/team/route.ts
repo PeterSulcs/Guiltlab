@@ -28,9 +28,9 @@ export async function POST(request: Request) {
   try {
     const { displayName, instanceUsernames } = await request.json();
 
-    if (!displayName || !instanceUsernames || instanceUsernames.length === 0) {
+    if (!displayName) {
       return NextResponse.json(
-        { error: 'Display name and at least one instance username are required' },
+        { error: 'Display name is required' },
         { status: 400 }
       );
     }
@@ -43,11 +43,11 @@ export async function POST(request: Request) {
       data: {
         displayName,
         instanceUsernames: {
-          create: instanceUsernames.map(iu => ({
+          create: instanceUsernames?.map(iu => ({
             instanceId: iu.instanceId,
             username: iu.username,
             instanceType: iu.instanceType
-          }))
+          })) || []
         }
       },
       include: {
@@ -102,11 +102,11 @@ export async function PUT(request: Request) {
           displayName,
           instanceUsernames: {
             createMany: {
-              data: instanceUsernames.map(iu => ({
+              data: instanceUsernames?.map(iu => ({
                 instanceId: iu.instanceId,
                 username: iu.username,
                 instanceType: iu.instanceType
-              }))
+              })) || []
             }
           }
         },

@@ -14,6 +14,11 @@ interface GitHubEvent {
     id: number;
     name: string;
   };
+  payload?: {
+    ref_type?: string;
+    action?: string;
+    [key: string]: any;
+  };
 }
 
 // POST /api/github/events
@@ -59,10 +64,27 @@ export async function POST(request: Request) {
     const startDateTime = new Date(startDate);
     const endDateTime = new Date(endDate);
 
-    while (true) {
+    // Try both public and private events endpoints
+    const endpoints = [
+      'GET /users/{username}/events',
+      'GET /users/{username}/events/public'
+    ];
+
+    for (const endpoint of endpoints) {
       try {
-        // Use the correct endpoint for fetching user events
-        const response = await octokit.request('GET /users/{username}/events', {
+        console.log(`Trying GitHub endpoint ${endpoint} for user ${username}`);
+        
+        // First verify the user exists
+        const userResponse = await octokit.request('GET /users/{username}', {
+          username: username,
+          headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
+        });
+        
+        console.log('GitHub user data:', userResponse.data);
+        
+        const response = await octokit.request(endpoint, {
           username: username,
           per_page,
           page,
@@ -71,17 +93,18 @@ export async function POST(request: Request) {
           }
         });
 
-        console.log('GitHub API response status:', response.status);
-        console.log('GitHub API response headers:', response.headers);
-        console.log('GitHub API response data length:', response.data.length);
-
-        if (response.data.length === 0) {
-          break;
+        console.log(`${endpoint} response status:`, response.status);
+        console.log(`${endpoint} response headers:`, response.headers);
+        console.log(`${endpoint} response data length:`, response.data.length);
+        
+        if (response.data.length > 0) {
+          console.log('First event:', JSON.stringify(response.data[0], null, 2));
+        } else {
+          console.log(`No events found for user ${username} using endpoint ${endpoint}`);
+          continue;
         }
 
-        let foundOldEvent = false;
-
-        // Filter events by date and store them in the database
+        // Process events...
         for (const event of response.data) {
           if (!event.created_at || !event.type || !event.actor || !event.repo) {
             console.log('Skipping event due to missing fields:', event);
@@ -89,42 +112,7 @@ export async function POST(request: Request) {
           }
 
           const eventDate = new Date(event.created_at);
-          
-          // If we find an event before our start date, we can stop paginating
-          if (eventDate < startDateTime) {
-            foundOldEvent = true;
-            break;
-          }
-
           if (eventDate >= startDateTime && eventDate <= endDateTime) {
-            // Store event in database
-            await prisma.gitHubEvent.upsert({
-              where: {
-                id_instanceId: {
-                  id: event.id.toString(),
-                  instanceId
-                }
-              },
-              update: {
-                created_at: eventDate,
-                type: event.type,
-                actor_id: event.actor.id,
-                actor_login: event.actor.login,
-                repo_id: event.repo.id,
-                repo_name: event.repo.name
-              },
-              create: {
-                id: event.id.toString(),
-                instanceId,
-                created_at: eventDate,
-                type: event.type,
-                actor_id: event.actor.id,
-                actor_login: event.actor.login,
-                repo_id: event.repo.id,
-                repo_name: event.repo.name
-              }
-            });
-
             events.push({
               id: event.id.toString(),
               type: event.type,
@@ -141,26 +129,54 @@ export async function POST(request: Request) {
           }
         }
 
-        // If we found an event before our start date or got less than per_page results, we can stop
-        if (foundOldEvent || response.data.length < per_page) {
-          break;
+        if (events.length > 0) {
+          console.log(`Found ${events.length} events for user ${username}`);
+          break; // We found events, no need to try other endpoints
         }
-
-        page++;
       } catch (error: any) {
-        console.error('Error fetching GitHub events:', error);
+        console.error(`Error with ${endpoint}:`, error);
         console.error('Error response:', error.response?.data);
         console.error('Error status:', error.response?.status);
-        // Return a more descriptive error message
-        return NextResponse.json(
-          { 
-            error: `GitHub API error: ${error.message}`,
-            status: error.status || 500,
-            details: error.response?.data
-          },
-          { status: error.status || 500 }
-        );
+        if (error.response?.status === 404) {
+          console.error(`User ${username} not found or no access to their events`);
+        }
+        // Continue to try the next endpoint
       }
+    }
+
+    if (events.length === 0) {
+      console.log(`No events found for user ${username} across all endpoints`);
+      return NextResponse.json([]);
+    }
+
+    // Store events in database
+    for (const event of events) {
+      await prisma.gitHubEvent.upsert({
+        where: {
+          id_instanceId: {
+            id: event.id,
+            instanceId
+          }
+        },
+        update: {
+          created_at: new Date(event.created_at),
+          type: event.type,
+          actor_id: event.actor.id,
+          actor_login: event.actor.login,
+          repo_id: event.repo.id,
+          repo_name: event.repo.name
+        },
+        create: {
+          id: event.id,
+          instanceId,
+          created_at: new Date(event.created_at),
+          type: event.type,
+          actor_id: event.actor.id,
+          actor_login: event.actor.login,
+          repo_id: event.repo.id,
+          repo_name: event.repo.name
+        }
+      });
     }
 
     return NextResponse.json(events);

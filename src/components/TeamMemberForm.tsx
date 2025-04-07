@@ -18,8 +18,6 @@ export default function TeamMemberForm() {
 
   // Handle adding a GitLab instance username
   const handleAddGitLabUsername = (instanceId: string, username: string) => {
-    if (!username.trim()) return;
-    
     // Check if we already have a username for this instance
     const existingIndex = instanceUsernames.findIndex(iu => iu.instanceId === instanceId);
     
@@ -27,6 +25,10 @@ export default function TeamMemberForm() {
       // Update existing
       setInstanceUsernames(prev => {
         const newUsernames = [...prev];
+        if (username.trim() === '') {
+          // Remove the username if empty
+          return newUsernames.filter(iu => iu.instanceId !== instanceId);
+        }
         newUsernames[existingIndex] = {
           instanceId,
           username: username.trim(),
@@ -34,8 +36,8 @@ export default function TeamMemberForm() {
         };
         return newUsernames;
       });
-    } else {
-      // Add new
+    } else if (username.trim() !== '') {
+      // Only add new if username is not empty
       setInstanceUsernames(prev => [
         ...prev,
         {
@@ -49,8 +51,6 @@ export default function TeamMemberForm() {
 
   // Handle adding a GitHub instance username
   const handleAddGitHubUsername = (instanceId: string, username: string) => {
-    if (!username.trim()) return;
-    
     // Check if we already have a username for this instance
     const existingIndex = instanceUsernames.findIndex(iu => iu.instanceId === instanceId);
     
@@ -58,6 +58,10 @@ export default function TeamMemberForm() {
       // Update existing
       setInstanceUsernames(prev => {
         const newUsernames = [...prev];
+        if (username.trim() === '') {
+          // Remove the username if empty
+          return newUsernames.filter(iu => iu.instanceId !== instanceId);
+        }
         newUsernames[existingIndex] = {
           instanceId,
           username: username.trim(),
@@ -65,8 +69,8 @@ export default function TeamMemberForm() {
         };
         return newUsernames;
       });
-    } else {
-      // Add new
+    } else if (username.trim() !== '') {
+      // Only add new if username is not empty
       setInstanceUsernames(prev => [
         ...prev,
         {
@@ -84,13 +88,13 @@ export default function TeamMemberForm() {
     setIsSubmitting(true);
 
     try {
-      if (!displayName.trim() || instanceUsernames.length === 0) {
-        throw new Error('Display name and at least one instance username are required');
+      if (!displayName.trim()) {
+        throw new Error('Display name is required');
       }
 
       const data = {
         displayName: displayName.trim(),
-        instanceUsernames
+        instanceUsernames // Don't filter out empty usernames
       };
 
       console.log('Submitting team member data:', data);

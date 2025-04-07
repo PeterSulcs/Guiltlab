@@ -41,8 +41,17 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
           teamMembers.map(async (member) => {
             let allContributions: { date: string; count: number }[] = [];
 
+            // Log team member and their instance usernames
+            console.log('Processing team member:', {
+              displayName: member.displayName,
+              instanceUsernames: member.instanceUsernames
+            });
+
             // Fetch GitLab events for each GitLab instance
-            for (const instanceUsername of member.instanceUsernames.filter(iu => iu.instanceType === 'gitlab')) {
+            const gitlabUsernames = member.instanceUsernames.filter(iu => iu.instanceType === 'gitlab');
+            console.log('GitLab usernames:', gitlabUsernames);
+
+            for (const instanceUsername of gitlabUsernames) {
               try {
                 const eventsResponse = await fetch('/api/gitlab/events', {
                   method: 'POST',
@@ -80,7 +89,10 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
             }
 
             // Fetch GitHub events for each GitHub instance
-            for (const instanceUsername of member.instanceUsernames.filter(iu => iu.instanceType === 'github')) {
+            const githubUsernames = member.instanceUsernames.filter(iu => iu.instanceType === 'github');
+            console.log('GitHub usernames:', githubUsernames);
+
+            for (const instanceUsername of githubUsernames) {
               try {
                 const eventsResponse = await fetch('/api/github/events', {
                   method: 'POST',
