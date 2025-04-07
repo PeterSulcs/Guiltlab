@@ -42,12 +42,12 @@ export function RepoProvider({ children }: { children: React.ReactNode }) {
 
   const loadGitHubInstances = async () => {
     try {
-      // For now, we'll use localStorage to store GitHub instances
-      // In a real app, you would fetch these from an API
-      const storedInstances = localStorage.getItem('githubInstances');
-      if (storedInstances) {
-        setGitHubInstances(JSON.parse(storedInstances));
+      const response = await fetch('/api/github/instances');
+      if (!response.ok) {
+        throw new Error('Failed to fetch GitHub instances');
       }
+      const instances = await response.json();
+      setGitHubInstances(instances);
     } catch (error) {
       console.error('Error loading GitHub instances:', error);
     }
@@ -100,11 +100,20 @@ export function RepoProvider({ children }: { children: React.ReactNode }) {
 
   const addGitHubInstance = async (instance: GitHubInstance) => {
     try {
-      // For now, we'll use localStorage to store GitHub instances
-      // In a real app, you would send this to an API
-      const updatedInstances = [...githubInstances, instance];
-      setGitHubInstances(updatedInstances);
-      localStorage.setItem('githubInstances', JSON.stringify(updatedInstances));
+      const response = await fetch('/api/github/instances', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(instance),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add GitHub instance');
+      }
+
+      const newInstance = await response.json();
+      setGitHubInstances([...githubInstances, newInstance]);
     } catch (error) {
       console.error('Error adding GitHub instance:', error);
       throw error;
@@ -113,13 +122,22 @@ export function RepoProvider({ children }: { children: React.ReactNode }) {
 
   const editGitHubInstance = async (id: string, instance: Omit<GitHubInstance, 'id'>) => {
     try {
-      // For now, we'll use localStorage to store GitHub instances
-      // In a real app, you would send this to an API
-      const updatedInstances = githubInstances.map(inst => 
-        inst.id === id ? { ...inst, ...instance } : inst
+      const response = await fetch('/api/github/instances', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, ...instance }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update GitHub instance');
+      }
+
+      const updatedInstance = await response.json();
+      setGitHubInstances(
+        githubInstances.map((i) => (i.id === id ? updatedInstance : i))
       );
-      setGitHubInstances(updatedInstances);
-      localStorage.setItem('githubInstances', JSON.stringify(updatedInstances));
     } catch (error) {
       console.error('Error editing GitHub instance:', error);
       throw error;
@@ -128,13 +146,21 @@ export function RepoProvider({ children }: { children: React.ReactNode }) {
 
   const removeGitHubInstance = async (id: string) => {
     try {
-      // For now, we'll use localStorage to store GitHub instances
-      // In a real app, you would send this to an API
-      const updatedInstances = githubInstances.filter(inst => inst.id !== id);
-      setGitHubInstances(updatedInstances);
-      localStorage.setItem('githubInstances', JSON.stringify(updatedInstances));
+      const response = await fetch('/api/github/instances', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete GitHub instance');
+      }
+
+      setGitHubInstances(githubInstances.filter((i) => i.id !== id));
     } catch (error) {
-      console.error('Error removing GitHub instance:', error);
+      console.error('Error deleting GitHub instance:', error);
       throw error;
     }
   };

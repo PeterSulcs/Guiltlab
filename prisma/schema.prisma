@@ -36,6 +36,32 @@ model GitLabEvent {
   @@unique([id, instanceId])
 }
 
+model GitHubInstance {
+  id        String        @id @default(uuid())
+  name      String
+  username  String
+  token     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  events    GitHubEvent[]
+}
+
+model GitHubEvent {
+  id              String         @id
+  instanceId      String
+  created_at      DateTime
+  type            String
+  actor_id        Int
+  actor_login     String
+  repo_id         Int
+  repo_name       String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  instance        GitHubInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([id, instanceId])
+}
+
 /// A team member in the system
 model TeamMember {
   id                String            @id @default(uuid())

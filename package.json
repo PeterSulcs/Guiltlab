@@ -12,6 +12,8 @@
     "fix:specific": "node fix-specific-errors.js"
   },
   "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "@prisma/client": "^6.5.0",
     "axios": "^1.8.4",
     "next": "15.2.4",
     "next-auth": "^4.24.11",

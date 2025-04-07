@@ -113,6 +113,12 @@ export default function Heatmap({ startDate, endDate }: HeatmapProps) {
           background: var(--card-background);
           border-radius: 0.5rem;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          width: 100%;
+          overflow: hidden;
+        }
+        :global(.react-calendar-heatmap) {
+          width: 100%;
+          height: auto;
         }
         :global(.react-calendar-heatmap .color-empty) {
           fill: var(--muted);

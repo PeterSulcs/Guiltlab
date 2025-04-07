@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import { useSelection } from '@/lib/selectionContext';
 import { useTeam } from '@/lib/teamContext';
+import { useRepo } from '@/lib/repoContext';
 
 interface TeamLeaderboardProps {
   startDate: Date;
@@ -13,20 +14,20 @@ interface TeamLeaderboardProps {
 interface TeamMemberContributions {
   id: string;
   displayName: string;
-  avatarUrl?: string;
   contributions: { date: string; count: number }[];
 }
 
 export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardProps) {
   const { selectedInstanceId, loading: selectionLoading } = useSelection();
   const { teamMembers, loading: teamLoading } = useTeam();
+  const { instances, githubInstances } = useRepo();
   const [memberContributions, setMemberContributions] = useState<TeamMemberContributions[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTeamData = async () => {
-      if (!selectedInstanceId || teamMembers.length === 0) {
+      if (teamMembers.length === 0) {
         setMemberContributions([]);
         return;
       }
@@ -35,59 +36,94 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
       setError(null);
 
       try {
-        // For each team member, find their username for the selected instance
+        // For each team member, fetch their contributions from all instances
         const membersWithContributions = await Promise.all(
           teamMembers.map(async (member) => {
-            // Find the username for the selected instance
-            const instanceUsername = member.instanceUsernames.find(
-              iu => iu.instanceId === selectedInstanceId
-            );
+            let allContributions: { date: string; count: number }[] = [];
 
-            if (!instanceUsername) {
-              return {
-                id: member.id,
-                displayName: member.displayName,
-                contributions: []
-              };
+            // Fetch GitLab events for each GitLab instance
+            for (const instanceUsername of member.instanceUsernames.filter(iu => iu.instanceType === 'gitlab')) {
+              try {
+                const eventsResponse = await fetch('/api/gitlab/events', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    instanceId: instanceUsername.instanceId,
+                    username: instanceUsername.username,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                  }),
+                });
+
+                if (!eventsResponse.ok) {
+                  console.error(`Failed to fetch GitLab events for ${member.displayName} on instance ${instanceUsername.instanceId}`);
+                  continue;
+                }
+
+                const events = await eventsResponse.json();
+
+                // Aggregate events by date
+                events.forEach((event: any) => {
+                  const date = new Date(event.created_at).toISOString().split('T')[0];
+                  const existingContribution = allContributions.find(c => c.date === date);
+                  if (existingContribution) {
+                    existingContribution.count += 1;
+                  } else {
+                    allContributions.push({ date, count: 1 });
+                  }
+                });
+              } catch (error) {
+                console.error(`Error fetching GitLab events for ${member.displayName}:`, error);
+              }
             }
 
-            // Fetch events for this user
-            const eventsResponse = await fetch('/api/gitlab/events', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                instanceId: selectedInstanceId,
-                username: instanceUsername.username,
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
-              }),
-            });
+            // Fetch GitHub events for each GitHub instance
+            for (const instanceUsername of member.instanceUsernames.filter(iu => iu.instanceType === 'github')) {
+              try {
+                const eventsResponse = await fetch('/api/github/events', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    instanceId: instanceUsername.instanceId,
+                    username: instanceUsername.username,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                  }),
+                });
 
-            if (!eventsResponse.ok) {
-              throw new Error(`Failed to fetch events for ${member.displayName}`);
+                if (!eventsResponse.ok) {
+                  console.error(`Failed to fetch GitHub events for ${member.displayName} on instance ${instanceUsername.instanceId}`);
+                  continue;
+                }
+
+                const events = await eventsResponse.json();
+
+                // Aggregate events by date
+                events.forEach((event: any) => {
+                  const date = new Date(event.created_at).toISOString().split('T')[0];
+                  const existingContribution = allContributions.find(c => c.date === date);
+                  if (existingContribution) {
+                    existingContribution.count += 1;
+                  } else {
+                    allContributions.push({ date, count: 1 });
+                  }
+                });
+              } catch (error) {
+                console.error(`Error fetching GitHub events for ${member.displayName}:`, error);
+              }
             }
 
-            const events = await eventsResponse.json();
-
-            // Aggregate events by date
-            const eventsByDate = events.reduce((acc: { [key: string]: number }, event: any) => {
-              const date = new Date(event.created_at).toISOString().split('T')[0];
-              acc[date] = (acc[date] || 0) + 1;
-              return acc;
-            }, {});
-
-            // Convert to CalendarHeatmap format
-            const contributions = Object.entries(eventsByDate).map(([date, count]) => ({
-              date,
-              count: count as number,
-            }));
+            // Sort contributions by date
+            allContributions.sort((a, b) => a.date.localeCompare(b.date));
 
             return {
               id: member.id,
               displayName: member.displayName,
-              contributions,
+              contributions: allContributions,
             };
           })
         );
@@ -101,7 +137,7 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
     };
 
     fetchTeamData();
-  }, [selectedInstanceId, teamMembers, startDate, endDate]);
+  }, [teamMembers, startDate, endDate]);
 
   if (selectionLoading || teamLoading || loading) {
     return <div className="text-center text-muted-foreground">Loading...</div>;
@@ -111,18 +147,18 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
     return <div className="text-center text-destructive">{error}</div>;
   }
 
-  if (!selectedInstanceId) {
-    return <div className="text-center text-muted-foreground">Select an instance to view team data</div>;
-  }
-
   if (teamMembers.length === 0) {
     return <div className="text-center text-muted-foreground">Add team members to view their contributions</div>;
+  }
+
+  if (instances.length === 0 && githubInstances.length === 0) {
+    return <div className="text-center text-muted-foreground">Add GitLab or GitHub instances to view contributions</div>;
   }
 
   return (
     <div className="team-leaderboard">
       <h2 className="text-xl font-semibold mb-4">Team Leaderboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {memberContributions.map((member) => (
           <div key={member.id} className="member-card p-4 bg-card-background rounded-lg shadow">
             <div className="flex items-center mb-4">
@@ -143,7 +179,7 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
                   if (!value) return { 'aria-label': 'No contributions' };
                   return { 'aria-label': `${value.date}: ${value.count} contributions` };
                 }}
-                showWeekdayLabels={false}
+                showWeekdayLabels={true}
                 titleForValue={(value) => {
                   if (!value) return 'No contributions';
                   return `${value.date}: ${value.count} contributions`;
@@ -161,12 +197,19 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
       <style jsx>{`
         .team-leaderboard {
           padding: 1rem;
+          width: 100%;
         }
         .member-card {
           border: 1px solid var(--border);
+          width: 100%;
         }
         .heatmap-container {
-          height: 100px;
+          width: 100%;
+          overflow: hidden;
+        }
+        :global(.react-calendar-heatmap) {
+          width: 100%;
+          height: auto;
         }
         :global(.react-calendar-heatmap .color-empty) {
           fill: var(--muted);

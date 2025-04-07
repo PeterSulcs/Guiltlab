@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import axios from 'axios';
+import { getGitLabClient } from '@/lib/gitlab';
+import { AxiosError } from 'axios';
+
+interface GitLabErrorResponse {
+  message?: string;
+}
 
 // POST /api/gitlab/user
 export async function POST(request: Request) {
@@ -26,75 +31,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for cached user data
-    const cachedUser = await prisma.gitLabUser.findFirst({
-      where: {
-        instanceId,
-        updatedAt: {
-          gte: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
-        },
-      },
-    });
-
-    if (cachedUser) {
-      return NextResponse.json(cachedUser);
-    }
-
     try {
-      // Fetch user data from GitLab API
-      const response = await axios.get(`${instance.baseUrl}/api/v4/user`, {
-        headers: {
-          'PRIVATE-TOKEN': instance.token,
-        },
-      });
+      // Initialize GitLab client
+      const gitlab = getGitLabClient(instance.baseUrl, instance.token);
 
+      // Fetch user data from GitLab API
+      const response = await gitlab.get('/user');
       const userData = response.data;
 
-      // First, check if a user with this GitLab ID already exists for this instance
-      const existingUser = await prisma.gitLabUser.findFirst({
-        where: {
-          instanceId,
-          // We need to find a way to identify the user without relying on the auto-incrementing id
-          // Let's use the username as a unique identifier for this instance
-          username: userData.username,
-        },
+      return NextResponse.json({
+        id: userData.id,
+        username: userData.username,
+        name: userData.name,
+        email: userData.email,
+        avatar_url: userData.avatar_url,
       });
-
-      let user;
-      if (existingUser) {
-        // Update the existing user
-        user = await prisma.gitLabUser.update({
-          where: {
-            id: existingUser.id,
-          },
-          data: {
-            username: userData.username,
-            name: userData.name,
-            email: userData.email,
-            avatar_url: userData.avatar_url,
-          },
-        });
-      } else {
-        // Create a new user
-        user = await prisma.gitLabUser.create({
-          data: {
-            id: userData.id,
-            instanceId,
-            username: userData.username,
-            name: userData.name,
-            email: userData.email,
-            avatar_url: userData.avatar_url,
-          },
-        });
-      }
-
-      return NextResponse.json(user);
-    } catch (apiError) {
-      console.error('GitLab API error:', apiError);
+    } catch (error) {
+      console.error('GitLab API error:', error);
       
-      if (axios.isAxiosError(apiError)) {
-        const status = apiError.response?.status;
-        const message = apiError.response?.data?.message || apiError.message;
+      const axiosError = error as AxiosError<GitLabErrorResponse>;
+      if (axiosError.response) {
+        const status = axiosError.response.status;
+        const message = axiosError.response.data?.message || axiosError.message;
         
         if (status === 401) {
           return NextResponse.json(
