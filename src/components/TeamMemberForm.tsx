@@ -6,9 +6,8 @@ import { useRepo } from '../lib/repoContext';
 
 export default function TeamMemberForm() {
   const { addTeamMember } = useTeam();
-  const { gitlabInstances, githubInstances } = useRepo();
+  const { instances, githubInstances } = useRepo();
   const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
   const [instanceUsernames, setInstanceUsernames] = useState<{
     instanceId: string;
     username: string;
@@ -89,16 +88,18 @@ export default function TeamMemberForm() {
         throw new Error('Display name and at least one instance username are required');
       }
 
-      // Add the team member
-      addTeamMember({
+      const data = {
         displayName: displayName.trim(),
-        username: username.trim() || displayName.trim(),
-        instanceUsernames,
-      });
+        instanceUsernames
+      };
+
+      console.log('Submitting team member data:', data);
+
+      // Add the team member
+      await addTeamMember(data);
 
       // Reset the form
       setDisplayName('');
-      setUsername('');
       setInstanceUsernames([]);
     } catch (err) {
       if (err instanceof Error) {
@@ -144,28 +145,11 @@ export default function TeamMemberForm() {
             />
           </div>
           
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium mb-1">
-              Username (optional)
-            </label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md bg-input"
-              placeholder="johndoe"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Display username (defaults to display name if empty)
-            </p>
-          </div>
-          
-          {gitlabInstances.length > 0 && (
+          {instances.length > 0 && (
             <div>
               <h4 className="font-medium text-sm mb-2">GitLab Usernames</h4>
               <div className="space-y-3">
-                {gitlabInstances.map(instance => (
+                {instances.map(instance => (
                   <div key={instance.id} className="flex items-center">
                     <div className="w-1/3 mr-2 text-sm text-muted-foreground">{instance.name}:</div>
                     <input

@@ -6,10 +6,15 @@ import InstanceForm from './InstanceForm';
 import Spinner from './ui/spinner';
 
 export default function InstanceList() {
-  const { gitlabInstances, removeGitLabInstance, isLoading, error: contextError } = useRepo();
+  const { instances, removeInstance, loading } = useRepo();
   const [editingInstance, setEditingInstance] = useState<GitLabInstance | null>(null);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter GitLab instances
+  const gitlabInstances = instances.filter(instance => 
+    'baseUrl' in instance
+  ) as GitLabInstance[];
 
   const handleRemove = async (instance: GitLabInstance) => {
     if (!confirm(`Are you sure you want to remove ${instance.name}?`)) {
@@ -20,7 +25,7 @@ export default function InstanceList() {
     setError(null);
 
     try {
-      await removeGitLabInstance(instance.id);
+      await removeInstance(instance.id);
     } catch (err: any) {
       setError(err.message || 'Failed to remove instance');
     } finally {
@@ -28,7 +33,7 @@ export default function InstanceList() {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Spinner className="h-8 w-8" />
@@ -36,10 +41,10 @@ export default function InstanceList() {
     );
   }
 
-  if (contextError) {
+  if (error) {
     return (
       <div className="p-4 bg-destructive/10 text-destructive rounded">
-        {contextError}
+        {error}
       </div>
     );
   }

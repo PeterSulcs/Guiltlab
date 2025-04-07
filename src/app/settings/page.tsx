@@ -6,9 +6,20 @@ import GitHubInstanceForm from "@/components/GitHubInstanceForm";
 import GitHubInstanceList from "@/components/GitHubInstanceList";
 import TeamMemberForm from "@/components/TeamMemberForm";
 import TeamMemberList from "@/components/TeamMemberList";
+import { SelectionProvider } from '@/lib/selectionContext';
+import { RepoProvider } from '@/lib/repoContext';
+import { useSelection } from '@/lib/selectionContext';
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [activeTab, setActiveTab] = useState<'gitlab' | 'github' | 'team'>('gitlab');
+  const { clearError } = useSelection();
+  
+  const handleTabChange = (tab: 'gitlab' | 'github' | 'team') => {
+    setActiveTab(tab);
+    if (tab === 'team') {
+      clearError();
+    }
+  };
   
   return (
     <div className="py-6 px-4 w-full overflow-hidden">
@@ -23,7 +34,7 @@ export default function SettingsPage() {
       <div className="border-b border-border mb-6">
         <div className="flex space-x-2">
           <button
-            onClick={() => setActiveTab('gitlab')}
+            onClick={() => handleTabChange('gitlab')}
             className={`px-4 py-2 font-medium text-sm ${
               activeTab === 'gitlab'
                 ? 'border-b-2 border-primary text-foreground'
@@ -33,7 +44,7 @@ export default function SettingsPage() {
             GitLab
           </button>
           <button
-            onClick={() => setActiveTab('github')}
+            onClick={() => handleTabChange('github')}
             className={`px-4 py-2 font-medium text-sm ${
               activeTab === 'github'
                 ? 'border-b-2 border-primary text-foreground'
@@ -43,7 +54,7 @@ export default function SettingsPage() {
             GitHub
           </button>
           <button
-            onClick={() => setActiveTab('team')}
+            onClick={() => handleTabChange('team')}
             className={`px-4 py-2 font-medium text-sm ${
               activeTab === 'team'
                 ? 'border-b-2 border-primary text-foreground'
@@ -80,5 +91,15 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <RepoProvider>
+      <SelectionProvider>
+        <SettingsContent />
+      </SelectionProvider>
+    </RepoProvider>
   );
 } 

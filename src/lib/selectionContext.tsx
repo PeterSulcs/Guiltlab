@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRepo } from './repoContext';
+import { usePathname } from 'next/navigation';
 
 interface SelectionContextType {
   selectedInstanceId: string | null;
@@ -10,6 +11,7 @@ interface SelectionContextType {
   setSelectedUserId: (id: number | null) => void;
   loading: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 const SelectionContext = createContext<SelectionContextType | undefined>(undefined);
@@ -20,6 +22,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pathname = usePathname();
 
   // Set default instance when instances are loaded
   useEffect(() => {
@@ -28,9 +31,20 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [instances, repoLoading, selectedInstanceId]);
 
+  // Clear error function
+  const clearError = () => {
+    setError(null);
+  };
+
   // Fetch user data when instance is selected
   useEffect(() => {
     const fetchUserData = async () => {
+      // Skip fetching user data on the settings page
+      if (pathname === '/settings') {
+        setLoading(false);
+        return;
+      }
+
       if (!selectedInstanceId) {
         setSelectedUserId(null);
         setLoading(false);
@@ -39,6 +53,8 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
 
       try {
         setLoading(true);
+        setError(null);
+        
         const response = await fetch('/api/gitlab/user', {
           method: 'POST',
           headers: {
@@ -50,7 +66,8 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch user data');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch user data');
         }
 
         const userData = await response.json();
@@ -65,7 +82,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     };
 
     fetchUserData();
-  }, [selectedInstanceId]);
+  }, [selectedInstanceId, pathname]);
 
   return (
     <SelectionContext.Provider
@@ -76,6 +93,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
         setSelectedUserId,
         loading,
         error,
+        clearError,
       }}
     >
       {children}

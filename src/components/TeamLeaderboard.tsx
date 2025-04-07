@@ -3,31 +3,31 @@
 import React, { useEffect, useState } from 'react';
 import CalendarHeatmap from 'react-calendar-heatmap';
 import { useSelection } from '@/lib/selectionContext';
+import { useTeam } from '@/lib/teamContext';
 
 interface TeamLeaderboardProps {
   startDate: Date;
   endDate: Date;
 }
 
-interface TeamMember {
-  id: number;
-  username: string;
-  name: string;
-  email: string;
-  avatar_url: string;
+interface TeamMemberContributions {
+  id: string;
+  displayName: string;
+  avatarUrl?: string;
   contributions: { date: string; count: number }[];
 }
 
 export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardProps) {
   const { selectedInstanceId, loading: selectionLoading } = useSelection();
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const { teamMembers, loading: teamLoading } = useTeam();
+  const [memberContributions, setMemberContributions] = useState<TeamMemberContributions[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTeamData = async () => {
-      if (!selectedInstanceId) {
-        setTeamMembers([]);
+      if (!selectedInstanceId || teamMembers.length === 0) {
+        setMemberContributions([]);
         return;
       }
 
@@ -35,26 +35,23 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
       setError(null);
 
       try {
-        // Fetch team members
-        const teamResponse = await fetch('/api/gitlab/team', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            instanceId: selectedInstanceId,
-          }),
-        });
-
-        if (!teamResponse.ok) {
-          throw new Error('Failed to fetch team data');
-        }
-
-        const teamData = await teamResponse.json();
-
-        // Fetch contributions for each team member
+        // For each team member, find their username for the selected instance
         const membersWithContributions = await Promise.all(
-          teamData.map(async (member: any) => {
+          teamMembers.map(async (member) => {
+            // Find the username for the selected instance
+            const instanceUsername = member.instanceUsernames.find(
+              iu => iu.instanceId === selectedInstanceId
+            );
+
+            if (!instanceUsername) {
+              return {
+                id: member.id,
+                displayName: member.displayName,
+                contributions: []
+              };
+            }
+
+            // Fetch events for this user
             const eventsResponse = await fetch('/api/gitlab/events', {
               method: 'POST',
               headers: {
@@ -62,14 +59,14 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
               },
               body: JSON.stringify({
                 instanceId: selectedInstanceId,
-                userId: member.id,
+                username: instanceUsername.username,
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
               }),
             });
 
             if (!eventsResponse.ok) {
-              throw new Error(`Failed to fetch events for ${member.username}`);
+              throw new Error(`Failed to fetch events for ${member.displayName}`);
             }
 
             const events = await eventsResponse.json();
@@ -88,13 +85,14 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
             }));
 
             return {
-              ...member,
+              id: member.id,
+              displayName: member.displayName,
               contributions,
             };
           })
         );
 
-        setTeamMembers(membersWithContributions);
+        setMemberContributions(membersWithContributions);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch team data');
       } finally {
@@ -103,9 +101,9 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
     };
 
     fetchTeamData();
-  }, [selectedInstanceId, startDate, endDate]);
+  }, [selectedInstanceId, teamMembers, startDate, endDate]);
 
-  if (selectionLoading || loading) {
+  if (selectionLoading || teamLoading || loading) {
     return <div className="text-center text-muted-foreground">Loading...</div>;
   }
 
@@ -117,21 +115,19 @@ export default function TeamLeaderboard({ startDate, endDate }: TeamLeaderboardP
     return <div className="text-center text-muted-foreground">Select an instance to view team data</div>;
   }
 
+  if (teamMembers.length === 0) {
+    return <div className="text-center text-muted-foreground">Add team members to view their contributions</div>;
+  }
+
   return (
     <div className="team-leaderboard">
       <h2 className="text-xl font-semibold mb-4">Team Leaderboard</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {teamMembers.map((member) => (
+        {memberContributions.map((member) => (
           <div key={member.id} className="member-card p-4 bg-card-background rounded-lg shadow">
             <div className="flex items-center mb-4">
-              <img
-                src={member.avatar_url}
-                alt={member.name}
-                className="w-12 h-12 rounded-full mr-4"
-              />
               <div>
-                <h3 className="font-medium">{member.name}</h3>
-                <p className="text-sm text-muted-foreground">@{member.username}</p>
+                <h3 className="font-medium">{member.displayName}</h3>
               </div>
             </div>
             <div className="heatmap-container mb-4">

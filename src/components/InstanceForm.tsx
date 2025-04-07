@@ -11,7 +11,7 @@ interface InstanceFormProps {
 }
 
 export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormProps = {}) {
-  const { addGitLabInstance, editGitLabInstance, error: contextError } = useRepo();
+  const { addInstance, editInstance } = useRepo();
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [token, setToken] = useState('');
@@ -50,8 +50,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
       
       if (isEditing && instanceToEdit) {
         // Update existing instance
-        await editGitLabInstance(instanceToEdit.id, {
-          id: instanceToEdit.id,
+        await editInstance(instanceToEdit.id, {
           name: name.trim(),
           baseUrl: baseUrl.trim(),
           token: token.trim()
@@ -62,8 +61,7 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
         }
       } else {
         // Add new instance
-        await addGitLabInstance({
-          id: crypto.randomUUID(),
+        await addInstance({
           name: name.trim(),
           baseUrl: baseUrl.trim(),
           token: token.trim()
@@ -90,12 +88,6 @@ export default function InstanceForm({ instanceToEdit, onCancel }: InstanceFormP
       <h2 className="text-xl font-semibold mb-4">
         {isEditing ? 'Edit GitLab Instance' : 'Add GitLab Instance'}
       </h2>
-      
-      {contextError && (
-        <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
-          {contextError}
-        </div>
-      )}
       
       {error && (
         <div className="mb-4 p-2 bg-destructive/10 text-destructive rounded">
