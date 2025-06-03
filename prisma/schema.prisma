@@ -84,3 +84,13 @@ model InstanceUsername {
 
   @@unique([instanceId, username, instanceType])
 }
+
+model Cache {
+  id        String   @id
+  data      String   // JSON stringified data
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id])
+}

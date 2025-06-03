@@ -14,6 +14,29 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if we have a cached response
+    const cacheKey = `gitlab_events_${instanceId}_${username}_${startDate}_${endDate}`;
+    const cachedResponse = await prisma.cache.findFirst({
+      where: {
+        id: cacheKey,
+        expiresAt: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (cachedResponse) {
+      return NextResponse.json(
+        JSON.parse(cachedResponse.data),
+        {
+          headers: {
+            'Cache-Control': 'public, max-age=3600', // 1 hour cache
+            'X-Cache': 'HIT'
+          }
+        }
+      );
+    }
+
     // Get the GitLab instance
     const instance = await prisma.gitLabInstance.findUnique({
       where: { id: instanceId }
@@ -55,7 +78,8 @@ export async function POST(request: Request) {
     });
 
     const eventsData = response.data;
-    // Update or create events in database
+    
+    // Store events in database
     const events = await Promise.all(
       eventsData.map(async (eventData: any) => {
         // Skip events with null target_id
@@ -103,7 +127,32 @@ export async function POST(request: Request) {
     // Filter out null values from skipped events
     const filteredEvents = events.filter(event => event !== null);
 
-    return NextResponse.json(filteredEvents);
+    // Cache the response
+    await prisma.cache.upsert({
+      where: { id: cacheKey },
+      update: {
+        data: JSON.stringify(filteredEvents),
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour TTL
+        updatedAt: new Date()
+      },
+      create: {
+        id: cacheKey,
+        instanceId,
+        username,
+        startDate,
+        endDate,
+        data: JSON.stringify(filteredEvents),
+        type: 'gitlab_events',
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour TTL
+      }
+    });
+
+    return NextResponse.json(filteredEvents, {
+      headers: {
+        'Cache-Control': 'public, max-age=3600', // 1 hour cache
+        'X-Cache': 'MISS'
+      }
+    });
   } catch (error) {
     console.error('Error fetching GitLab events:', error);
     return NextResponse.json(
