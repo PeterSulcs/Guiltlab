@@ -1,104 +1,179 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { GitLabInstance, GitHubInstance,  } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { GitLabInstance, GitHubInstance } from '@/types';
 
 interface RepoContextType {
-  gitlabInstances: GitLabInstance[];
+  instances: GitLabInstance[];
   githubInstances: GitHubInstance[];
-  addGitLabInstance: (instance: GitLabInstance) => void;
-  addGitHubInstance: (instance: GitHubInstance) => void;
-  editGitLabInstance: (id: string, updatedInstance: Partial<GitLabInstance>) => void;
-  editGitHubInstance: (id: string, updatedInstance: Partial<GitHubInstance>) => void;
-  removeGitLabInstance: (id: string) => void;
-  removeGitHubInstance: (id: string) => void;
+  addInstance: (instance: Omit<GitLabInstance, 'id'>) => Promise<void>;
+  editInstance: (id: string, instance: Omit<GitLabInstance, 'id'>) => Promise<void>;
+  removeInstance: (id: string) => Promise<void>;
+  addGitHubInstance: (instance: GitHubInstance) => Promise<void>;
+  editGitHubInstance: (id: string, instance: Omit<GitHubInstance, 'id'>) => Promise<void>;
+  removeGitHubInstance: (id: string) => Promise<void>;
   loading: boolean;
 }
 
 const RepoContext = createContext<RepoContextType | undefined>(undefined);
 
-export function RepoProvider({ children }: { children: ReactNode }) {
-  const [gitlabInstances, setGitLabInstances] = useState<GitLabInstance[]>([]);
+export function RepoProvider({ children }: { children: React.ReactNode }) {
+  const [instances, setInstances] = useState<GitLabInstance[]>([]);
   const [githubInstances, setGitHubInstances] = useState<GitHubInstance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load instances from localStorage on component mount
-    const loadInstances = () => {
-      const savedGitLabInstances = localStorage.getItem('gitlabInstances');
-      if (savedGitLabInstances) {
-        setGitLabInstances(JSON.parse(savedGitLabInstances));
-      }
-      
-      const savedGitHubInstances = localStorage.getItem('githubInstances');
-      if (savedGitHubInstances) {
-        setGitHubInstances(JSON.parse(savedGitHubInstances));
-      }
-      
-      setLoading(false);
-    };
-
     loadInstances();
+    loadGitHubInstances();
   }, []);
 
-  // Update localStorage when instances change
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('gitlabInstances', JSON.stringify(gitlabInstances));
+  const loadInstances = async () => {
+    try {
+      const response = await fetch('/api/instances');
+      if (!response.ok) throw new Error('Failed to load instances');
+      const data = await response.json();
+      setInstances(data);
+    } catch (error) {
+      console.error('Error loading instances:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [gitlabInstances, loading]);
-  
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('githubInstances', JSON.stringify(githubInstances));
+  };
+
+  const loadGitHubInstances = async () => {
+    try {
+      const response = await fetch('/api/github/instances');
+      if (!response.ok) {
+        throw new Error('Failed to fetch GitHub instances');
+      }
+      const instances = await response.json();
+      setGitHubInstances(instances);
+    } catch (error) {
+      console.error('Error loading GitHub instances:', error);
     }
-  }, [githubInstances, loading]);
-
-  const addGitLabInstance = (instance: GitLabInstance) => {
-    setGitLabInstances(prev => [...prev, instance]);
-  };
-  
-  const addGitHubInstance = (instance: GitHubInstance) => {
-    setGitHubInstances(prev => [...prev, instance]);
   };
 
-  const editGitLabInstance = (id: string, updatedInstance: Partial<GitLabInstance>) => {
-    setGitLabInstances(prev => 
-      prev.map(instance => 
-        instance.id === id 
-          ? { ...instance, ...updatedInstance } 
-          : instance
-      )
-    );
-  };
-  
-  const editGitHubInstance = (id: string, updatedInstance: Partial<GitHubInstance>) => {
-    setGitHubInstances(prev => 
-      prev.map(instance => 
-        instance.id === id 
-          ? { ...instance, ...updatedInstance } 
-          : instance
-      )
-    );
+  const addInstance = async (instance: Omit<GitLabInstance, 'id'>) => {
+    try {
+      const response = await fetch('/api/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(instance),
+      });
+      if (!response.ok) throw new Error('Failed to add instance');
+      const newInstance = await response.json();
+      setInstances(prev => [...prev, newInstance]);
+    } catch (error) {
+      console.error('Error adding instance:', error);
+      throw error;
+    }
   };
 
-  const removeGitLabInstance = (id: string) => {
-    setGitLabInstances(prev => prev.filter(instance => instance.id !== id));
+  const editInstance = async (id: string, instance: Omit<GitLabInstance, 'id'>) => {
+    try {
+      const response = await fetch(`/api/instances/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(instance),
+      });
+      if (!response.ok) throw new Error('Failed to edit instance');
+      const updatedInstance = await response.json();
+      setInstances(prev => prev.map(inst => inst.id === id ? updatedInstance : inst));
+    } catch (error) {
+      console.error('Error editing instance:', error);
+      throw error;
+    }
   };
-  
-  const removeGitHubInstance = (id: string) => {
-    setGitHubInstances(prev => prev.filter(instance => instance.id !== id));
+
+  const removeInstance = async (id: string) => {
+    try {
+      const response = await fetch(`/api/instances/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to remove instance');
+      setInstances(prev => prev.filter(inst => inst.id !== id));
+    } catch (error) {
+      console.error('Error removing instance:', error);
+      throw error;
+    }
+  };
+
+  const addGitHubInstance = async (instance: GitHubInstance) => {
+    try {
+      const response = await fetch('/api/github/instances', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(instance),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add GitHub instance');
+      }
+
+      const newInstance = await response.json();
+      setGitHubInstances([...githubInstances, newInstance]);
+    } catch (error) {
+      console.error('Error adding GitHub instance:', error);
+      throw error;
+    }
+  };
+
+  const editGitHubInstance = async (id: string, instance: Omit<GitHubInstance, 'id'>) => {
+    try {
+      const response = await fetch('/api/github/instances', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, ...instance }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update GitHub instance');
+      }
+
+      const updatedInstance = await response.json();
+      setGitHubInstances(
+        githubInstances.map((i) => (i.id === id ? updatedInstance : i))
+      );
+    } catch (error) {
+      console.error('Error editing GitHub instance:', error);
+      throw error;
+    }
+  };
+
+  const removeGitHubInstance = async (id: string) => {
+    try {
+      const response = await fetch('/api/github/instances', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete GitHub instance');
+      }
+
+      setGitHubInstances(githubInstances.filter((i) => i.id !== id));
+    } catch (error) {
+      console.error('Error deleting GitHub instance:', error);
+      throw error;
+    }
   };
 
   return (
     <RepoContext.Provider value={{ 
-      gitlabInstances, 
+      instances, 
       githubInstances,
-      addGitLabInstance, 
+      addInstance, 
+      editInstance, 
+      removeInstance,
       addGitHubInstance,
-      editGitLabInstance, 
       editGitHubInstance,
-      removeGitLabInstance, 
       removeGitHubInstance,
       loading 
     }}>

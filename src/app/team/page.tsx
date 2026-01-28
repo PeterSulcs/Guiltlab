@@ -3,6 +3,8 @@
 import React from 'react';
 import TeamLeaderboard from '@/components/TeamLeaderboard';
 import { useDateRange } from '@/lib/dateContext';
+import { SelectionProvider } from '@/lib/selectionContext';
+import { RepoProvider } from '@/lib/repoContext';
 
 export default function TeamPage() {
   const { dateRange, setDateRange } = useDateRange();
@@ -84,30 +86,34 @@ export default function TeamPage() {
   };
 
   return (
-    <div className="py-6 px-4 w-full overflow-hidden">
-      <div className="flex justify-end mb-6">
-        <div className="relative">
-          <select
-            value={dateRange.value}
-            onChange={handleYearChange}
-            className="p-2 pr-8 rounded border border-border bg-input text-sm appearance-none"
-            aria-label="Select time period"
-          >
-            {yearOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
-            <svg className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-            </svg>
+    <RepoProvider>
+      <SelectionProvider>
+        <div className="py-6 px-4 w-full overflow-hidden">
+          <div className="flex justify-end mb-6">
+            <div className="relative">
+              <select
+                value={dateRange.value}
+                onChange={handleYearChange}
+                className="p-2 pr-8 rounded border border-border bg-input text-sm appearance-none"
+                aria-label="Select time period"
+              >
+                {yearOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                <svg className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <TeamLeaderboard />
-    </div>
+          <TeamLeaderboard startDate={dateRange.startDate} endDate={dateRange.endDate} />
+        </div>
+      </SelectionProvider>
+    </RepoProvider>
   );
 } 

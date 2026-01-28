@@ -5,6 +5,18 @@ export interface GitLabInstance {
   token: string;
 }
 
+export interface GitLabEvent {
+  id: number;
+  created_at: string;
+  action_name: string;
+  target_id: number;
+  target_type: string;
+  author_id: number;
+  author_username: string;
+  project_id: number;
+  project_name: string;
+}
+
 export interface GitHubInstance {
   id: string;
   name: string;
@@ -84,4 +96,9 @@ export interface TeamLeaderboardEntry {
       count: number;
     }[];
   }[];
+}
+
+export interface Contribution {
+  date: string;
+  count: number;
 } 

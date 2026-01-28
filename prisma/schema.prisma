@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["referentialIntegrity"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model GitLabInstance {
+  id        String        @id @default(uuid())
+  name      String
+  baseUrl   String
+  token     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  events    GitLabEvent[]
+}
+
+model GitLabEvent {
+  id              Int            @id @default(autoincrement())
+  instanceId      String
+  created_at      DateTime
+  action_name     String
+  target_id       Int
+  target_type     String
+  author_id       Int
+  author_username String
+  project_id      Int
+  project_name    String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  instance        GitLabInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([id, instanceId])
+}
+
+model GitHubInstance {
+  id        String        @id @default(uuid())
+  name      String
+  username  String
+  token     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  events    GitHubEvent[]
+}
+
+model GitHubEvent {
+  id              String         @id
+  instanceId      String
+  created_at      DateTime
+  type            String
+  actor_id        Int
+  actor_login     String
+  repo_id         Int
+  repo_name       String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  instance        GitHubInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([id, instanceId])
+}
+
+/// A team member in the system
+model TeamMember {
+  id                String            @id @default(uuid())
+  displayName       String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  instanceUsernames InstanceUsername[]
+}
+
+/// A username for a team member on a specific instance
+model InstanceUsername {
+  id            String     @id @default(uuid())
+  teamMemberId  String
+  instanceId    String
+  username      String
+  instanceType  String     // 'gitlab' or 'github'
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, username, instanceType])
+}
+
+model Cache {
+  id        String   @id
+  data      String   // JSON stringified data
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id])
+}
